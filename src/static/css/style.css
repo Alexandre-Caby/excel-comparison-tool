@@ -1,0 +1,523 @@
+/* Modern styling for Excel Comparison Tool */
+
+/* RLE Color Palette */
+:root {
+    /* Vert RLE - Primary Green */
+    --vert-rle: #007147;         /* R0 G122 B71 */
+    --vert-rle-70: #4CA27E;      /* 70% */
+    --vert-rle-50: #80BCA3;      /* 50% */
+    
+    /* Forêt - Forest Green */
+    --foret: #154734;            /* R21 G71 B52 */
+    --foret-70: #5B7E71;         /* 70% */
+    --foret-50: #8AA399;         /* 50% */
+    
+    /* Vert d'eau - Water Green */
+    --vert-deau: #A1D6CA;        /* R161 G214 B202 */
+    --vert-deau-bg: #BDE2DA;     /* Main */
+    --vert-deau-light: #D0EAE4;  /* Light */
+    
+    /* Anthracite - Grey */
+    --anthracite: #2B2C4B;       /* R43 G44 B75 */
+    --anthracite-70: #6B6B81;    /* 70% */
+    --anthracite-50: #9595A5;    /* 50% */
+    
+    /* Complementary Colors */
+    --ocre: #BE9655;             /* R190 G150 B85 */
+    --ocre-light: #DECAAA;       /* Light */
+    --ocre-70: #D1B588;          /* 70% */
+    
+    --jaune: #FFD250;            /* R255 G210 B80 */
+    --jaune-light: #FFE8A7;      /* Light */
+    --jaune-70: #FFDF84;         /* 70% */
+    
+    --lavande: #BAC0E0;          /* R186 G192 B224 */
+    --lavande-light: #DCDFEF;    /* Light */
+    --lavande-70: #CFD3E9;       /* 70% */
+    
+    /* Less used blues */
+    --bleu-rle: #008CE6;         /* R0 G140 B230 */
+    --bleu-rle-70: #4CAEED;      /* 70% */
+    --bleu-rle-50: #80C5F2;      /* 50% */
+    
+    --bleu-marine: #00205B;      /* R0 G32 B91 */
+    --bleu-marine-70: #4C628C;   /* 70% */
+    --bleu-marine-50: #808FAD;   /* 50% */
+    
+    --bleu-horizon: #A4C8E1;     /* R164 G200 B225 */
+    --bleu-horizon-bg: #BFD8EA;  /* Main */
+    --bleu-horizon-light: #D1E3F0;/* Light */
+    
+    /* UI Colors */
+    --white: #FFFFFF;
+    --black: #000000;
+    --error: #D62728;
+    --success: #2CA02C;
+    --warning: #FFD250;
+}
+
+/* Base styling */
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: var(--anthracite);
+}
+
+/* Force Streamlit layout modifications */
+.main .block-container {
+    padding-top: 1rem;
+    max-width: 1200px;
+    padding-bottom: 2rem;
+    margin-bottom: 60px; /* Height of the footer */
+}
+
+/* Header styling - changed to green as requested */
+header[data-testid="stHeader"] {
+    background-color: var(--foret-50) !important;
+    border-bottom: 1px solid var(--foret-70);
+}
+
+/* Custom header controls */
+button[kind="header"] {
+    color: white !important;
+}
+
+/* Make deploy button and other header buttons white */
+div[data-testid="stDecoration"] {
+    color: white !important; 
+}
+
+/* Ensure all text in header is hidden */
+header[data-testid="stHeader"] div, 
+header[data-testid="stHeader"] span,
+header[data-testid="stHeader"] p,
+header[data-testid="stHeader"] svg {
+    color: white !important;
+    fill: white !important;
+    opacity: 0;
+    display: none !important;
+}
+
+/* Fix sidebar positioning and styling - changed to more sober darker color */
+section[data-testid="stSidebar"] {
+    background-color: var(--anthracite-50) !important;
+    background-image: none !important;
+    width: 250px !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100vh !important;
+    z-index: 999 !important;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2) !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] div[data-testid="stVerticalBlock"] {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+section[data-testid="stSidebar"] h1, 
+section[data-testid="stSidebar"] h2, 
+section[data-testid="stSidebar"] h3, 
+section[data-testid="stSidebar"] h4 {
+    color: white !important;
+    font-weight: 600 !important;
+}
+
+section[data-testid="stSidebar"] .stMarkdown p {
+    color: var(--white) !important;
+}
+
+/* Main content positioning to accommodate sidebar */
+.stApp > header + div {
+    padding-left: 250px !important;
+}
+
+section.main {
+    margin-left: 250px !important;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    margin-bottom: 2rem;
+}
+
+h1 {
+    color: var(--vert-rle);
+    font-size: 2rem;
+    border-bottom: 2px solid var(--vert-rle-50);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2.5rem;
+    margin-top: 1.5rem;
+}
+
+h2 {
+    color: var(--vert-rle-70);
+    font-size: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+h3 {
+    color: var(--anthracite);
+    font-size: 1.2rem;
+}
+
+/* Custom Header and branding */
+.main-title {
+    color: var(--vert-rle);
+    font-size: 2.2rem;
+    font-weight: 700;
+    text-align: center;
+    margin-top: 1rem; /* Added spacing */
+    margin-bottom: 2rem; /* Increased spacing */
+}
+
+.logo-container {
+    text-align: center;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    width: 100%;
+
+}
+
+.logo {
+    max-width: 20%;
+    margin: 0 auto;
+}
+
+/* Custom Cards */
+.card {
+    background-color: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid var(--vert-rle);
+}
+
+.card-header {
+    font-weight: 600;
+    font-size: 1.2rem;
+    color: var(--vert-rle-70);
+    border-bottom: 1px solid var(--vert-deau-bg);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+/* Button styling based on RLE colors */
+.stButton > button {
+    border-radius: 6px !important;
+    padding: 0.6rem 1.2rem !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.12) !important;
+    font-size: 0.95rem !important;
+}
+
+.stButton > button:hover {
+    filter: brightness(1.05) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+    transform: translateY(-1px) !important;
+}
+
+.stButton > button:active {
+    transform: translateY(1px) !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+}
+
+/* RLE themed buttons */
+.primary-btn .stButton > button {
+    background-color: var(--vert-rle) !important;
+    color: white !important;
+    border: none !important;
+}
+
+.secondary-btn .stButton > button {
+    background-color: var(--anthracite) !important;
+    color: white !important;
+    border: none !important;
+}
+
+.tertiary-btn .stButton > button {
+    background-color: var(--white) !important;
+    color: var (--vert-rle) !important;
+    border: 1px solid var(--vert-rle) !important;
+}
+
+/* Alert boxes with RLE colors */
+.info-box {
+    padding: 1rem;
+    border-radius: 6px;
+    background-color: var(--vert-deau-bg);
+    color: var(--foret);
+    margin-bottom: 1rem;
+    border-left: 5px solid var(--vert-rle);
+}
+
+.success-box {
+    padding: 1rem;
+    border-radius: 6px;
+    background-color: var(--vert-deau-light);
+    color: var(--vert-rle);
+    margin-bottom: 1rem;
+    border-left: 5px solid var(--vert-rle-70);
+}
+
+.warning-box {
+    padding: 1rem;
+    border-radius: 6px;
+    background-color: var(--jaune-light);
+    color: var(--anthracite);
+    margin-bottom: 1rem;
+    border-left: 5px solid var(--jaune);
+}
+
+.error-box {
+    padding: 1rem;
+    border-radius: 6px;
+    background-color: #f8d7da;
+    color: #721c24;
+    margin-bottom: 1rem;
+    border-left: 5px solid var(--error);
+}
+
+/* Data Tables with RLE theme */
+.stDataFrame {
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--vert-deau);
+    margin-bottom: 1.5rem !important;
+}
+
+.stDataFrame table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.stDataFrame th {
+    background-color: var(--vert-rle) !important;
+    color: var(--white) !important;
+    padding: 12px 15px !important;
+    font-weight: 500 !important;
+    text-transform: uppercase !important;
+    font-size: 0.85rem !important;
+    letter-spacing: 0.5px !important;
+}
+
+.stDataFrame td {
+    padding: 10px 15px !important;
+    border-top: 1px solid var(--vert-deau-bg) !important;
+}
+
+.stDataFrame tr:nth-child(even) {
+    background-color: var(--vert-deau-light);
+}
+
+.stDataFrame tr:hover td {
+    background-color: var(--vert-deau-bg);
+}
+
+/* Metrics styling with RLE colors */
+.stMetric {
+    background-color: var(--white);
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    border-left: 3px solid var(--vert-rle);
+}
+
+.stMetric label {
+    color: var(--anthracite);
+    font-weight: 500;
+}
+
+.stMetric [data-testid="stMetricValue"] {
+    color: var(--vert-rle);
+    font-size: 1.8rem !important;
+    font-weight: 600 !important;
+}
+
+/* Navigation styling */
+.nav-container {
+    margin-bottom: 2rem;
+}
+
+/* Custom hamburger-style toggle button for sidebar */
+.toggle-button {
+    background-color: transparent;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 24px;
+    width: 30px;
+}
+
+.toggle-button span {
+    display: block;
+    width: 100%;
+    height: 3px;
+    background-color: white;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+.nav-menu {
+    margin-top: 1rem;
+}
+
+.nav-button {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.nav-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.nav-button-active {
+    background-color: var(--vert-rle);
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.footer {
+    position: fixed;
+    bottom: 0;
+    left: 250px; /* Match the width of the sidebar */
+    right: 0;
+    text-align: center;
+    padding: 10px;
+    color: rgba(0, 0, 0, 0.8);
+    font-size: 0.8rem;
+    border-top: 1px solid rgba(0,0,0,0.1);
+    background-color: var(--lavande-light);
+    z-index: 100;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    section[data-testid="stSidebar"] {
+        width: 100% !important;
+        position: relative !important;
+        padding: 1rem !important;
+    }
+    
+    .stApp > header + div {
+        padding-left: 0 !important;
+    }
+    
+    section.main {
+        margin-left: 0 !important;
+    }
+    
+    h1 {
+        font-size: 1.8rem;
+    }
+    
+    .main-title {
+        font-size: 1.8rem;
+    }
+    
+    .footer {
+        left: 0;
+        position: relative;
+        margin-top: 0.35rem;
+    }
+}
+
+/* Hide the default arrow button in the header */
+div[data-testid="stSidebarCollapsedControl"] button[data-testid="stBaseButton-headerNoPadding"] {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+div[data-testid="stSidebarCollapsedControl"] svg {
+    display: none !important;
+}
+
+/* Custom styling for download button */
+.download-button {
+    display: inline-block;
+    background-color: var(--vert-rle);
+    color: white !important;
+    padding: 10px 15px;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 500;
+    margin-top: 10px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+    transition: all 0.2s ease;
+}
+
+.download-button:hover {
+    background-color: var(--vert-rle-70);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+}
+
+/* Export section styling */
+.export-section {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+}
+
+/* Button alignment fixes */
+.button-align-with-input button {
+    margin-top: 24px !important;
+    height: 38px !important;
+    padding: 0 !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+}
+
+/* Fix button alignment with text input */
+[data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"] > 
+[data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]:has(.stButton) button {
+    margin-top: 2rem !important; 
+}
+
+/* Fix specific export button layout in reports page */
+[data-testid="stHorizontalBlock"] [data-testid="column"] .stButton button[kind="primary"] {
+    margin-top: 1.9rem !important; 
+    height: 38px !important;
+    line-height: 38px !important; 
+    min-height: 38px !important;
+    box-sizing: border-box !important;
+}
+
+/* Fix button container height to match input container */
+[data-testid="stHorizontalBlock"] [data-testid="column"]:has(.stButton) [data-testid="stVerticalBlock"] {
+    display: flex !important;
+    align-items: flex-end !important;
+}
+
+/* Success message styling */
+.stAlert {
+    margin-top: 16px;
+}
