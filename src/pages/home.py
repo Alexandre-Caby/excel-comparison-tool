@@ -40,25 +40,29 @@ def show():
     
     # Quick Start Buttons
     st.subheader("Démarrage rapide")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Apply the new button styling
-        with st.container():
-            st.markdown('<div class="primary-btn">', unsafe_allow_html=True)
+
+    st.markdown('<div class="quick-start-container">', unsafe_allow_html=True)
+
+    _, center_col, _ = st.columns([1, 6, 1])
+
+    with center_col:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown('<div class="primary-btn quick-start-button">', unsafe_allow_html=True)
             if st.button("Nouvelle comparaison", key="new_comparison", use_container_width=True):
                 st.session_state.current_page = "upload"
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col2:
-        with st.container():
-            st.markdown('<div class="secondary-btn">', unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown('<div class="secondary-btn quick-start-button">', unsafe_allow_html=True)
             if st.button("Voir les rapports", key="view_reports", use_container_width=True):
                 st.session_state.current_page = "reports"
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
     show()

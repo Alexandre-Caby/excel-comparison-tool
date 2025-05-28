@@ -60,4 +60,4 @@ This project uses various open-source software components. We would like to ackn
 
 For licensing inquiries, please contact:
 
-[Alexandre Caby]
+[alexandre.caby@sncf.fr](mailto:alexandre.caby@sncf.fr)

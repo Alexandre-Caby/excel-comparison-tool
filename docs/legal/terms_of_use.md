@@ -90,7 +90,7 @@ These Terms shall be governed by and construed in accordance with the laws of Fr
 
 ## 10. Contact
 
-If you have any questions about these Terms, please contact us [mailto:alexandre.caby@sncf.fr].
+If you have any questions about these Terms, please contact us at [alexandre.caby@sncf.fr](mailto:alexandre.caby@sncf.fr).
 
 ---
 

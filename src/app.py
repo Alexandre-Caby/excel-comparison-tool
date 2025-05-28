@@ -4,13 +4,24 @@ import sys
 import time
 import base64
 
+def get_icon_base64():
+    """Get the app icon as base64 string"""
+    try:
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src", "static", "images", "icon_excel_comparison.ico")
+        if os.path.exists(icon_path):
+            with open(icon_path, 'rb') as f:
+                icon_data = f.read()
+            return f"data:image/x-icon;base64,{base64.b64encode(icon_data).decode()}"
+    except:
+        pass
+    return "📊"
+
 def run_app():
     """Run the Excel Comparison Tool application"""
     # Configure page settings
-    icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src", "static", "images", "icon_excel_comparison.ico")
     st.set_page_config(
         page_title="ECT Technis",
-        page_icon=icon_path,
+        page_icon=get_icon_base64(),
         layout="wide",
         initial_sidebar_state="expanded",
     )
@@ -43,6 +54,12 @@ def run_app():
         elif st.session_state.current_page == "reports":
             from src.pages import reports
             reports.show()
+        elif st.session_state.current_page == "legal":
+            from src.pages import legal
+            legal.show()
+        elif st.session_state.current_page == "help":
+            from src.pages import help
+            help.show()
         else:
             st.error(f"Page '{st.session_state.current_page}' introuvable!")
             st.session_state.current_page = "home"
@@ -54,12 +71,32 @@ def run_app():
     render_footer()
 
 def load_css():
-    """Load custom CSS styles"""
+    """Load custom CSS styles in modular fashion"""
     try:
-        css_path = os.path.join(os.path.dirname(__file__), "static", "css", "style.css")
-        if os.path.exists(css_path):
-            with open(css_path) as f:
-                st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+        css_dir = os.path.join(os.path.dirname(__file__), "static", "css")
+        css_files = [
+            "variables.css",
+            "base.css", 
+            "components.css",
+            "buttons.css",
+            "layout.css",
+            "responsive.css"
+        ]
+        
+        combined_css = ""
+        
+        for css_file in css_files:
+            css_path = os.path.join(css_dir, css_file)
+            if os.path.exists(css_path):
+                with open(css_path, 'r', encoding='utf-8') as f:
+                    combined_css += f"/* {css_file} */\n"
+                    combined_css += f.read()
+                    combined_css += "\n\n"
+            else:
+                st.warning(f"CSS file not found: {css_file}")
+        
+        if combined_css:
+            st.markdown(f"<style>{combined_css}</style>", unsafe_allow_html=True)
     except Exception as e:
         st.warning(f"Could not load CSS: {str(e)}")
 
@@ -96,7 +133,9 @@ def render_sidebar():
             "home": "🏠 Accueil",
             "upload": "📤 Télécharger des fichiers", 
             "comparison": "🔍 Comparer des fichiers", 
-            "reports": "📊 Rapports"
+            "reports": "📊 Rapports",
+            "help": "❓ Aide",
+            "legal": "📄 Mentions légales"
         }
         
         # Current page indicator
@@ -122,15 +161,19 @@ def render_sidebar():
 
 def render_footer():
     """Render footer in the main content area"""
-    st.markdown(
-        """
-        <div class="footer">
-            <p style="margin-bottom: 5px;">Version 1.0</p>
-            <p>© 2025 ECT Technis</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    # Create footer with clickable legal link
+    footer_cols = st.columns([4, 1, 4])
+    
+    with footer_cols[1]:
+        st.markdown(
+            """
+            <div class="footer">
+                <p style="margin-bottom: 5px;">Version 1.0</p>
+                <p style="margin-bottom: 5px;">© 2025 ECT Technis</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
 if __name__ == "__main__":
     run_app()

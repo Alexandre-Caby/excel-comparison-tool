@@ -1,0 +1,73 @@
+/* Button styles */
+
+.stButton > button {
+    border-radius: 6px !important;
+    padding: 0.6rem 1.2rem !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 2px 5px var(--shadow-color) !important;
+    font-size: 0.95rem !important;
+    color: var(--white) !important;
+    background-color: var(--vert-rle-70) !important;
+    border: none !important;
+}
+
+.stButton > button:hover {
+    filter: brightness(1.05) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+    transform: translateY(-1px) !important;
+}
+
+.stButton > button:active {
+    transform: translateY(1px) !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+}
+
+/* RLE themed buttons */
+.primary-btn .stButton > button,
+.primary-btn button,
+[class*="primary"] button {
+    background-color: var(--vert-rle) !important;
+    color: var(--white) !important;
+    border: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+.secondary-btn .stButton > button,
+.secondary-btn button,
+[class*="secondary"] button {
+    background-color: var(--anthracite) !important;
+    color: var(--white) !important;
+    border: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+/* Navigation buttons */
+.nav-button {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--white);
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.nav-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.nav-button-active {
+    background-color: var(--vert-rle);
+    color: var(--white);
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
