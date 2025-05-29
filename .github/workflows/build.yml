@@ -75,67 +75,90 @@ jobs:
         echo "Project structure:"
         Get-ChildItem -Path . -Recurse | Where-Object { $_.Name -match '\.(py|txt|md)$' } | Select-Object FullName
 
-    - name: Obfuscate Code with PyArmor
+    - name: Secure code with basic obfuscation
       run: |
-        # Create output directory
-        New-Item -Path "dist_obf" -ItemType Directory -Force
+        # Create build directory structure
+        New-Item -Path "secure_build" -ItemType Directory -Force
+        New-Item -Path "secure_build/src" -ItemType Directory -Force
+        New-Item -Path "secure_build/src/backend" -ItemType Directory -Force
+        New-Item -Path "secure_build/src/core" -ItemType Directory -Force
+        New-Item -Path "secure_build/src/models" -ItemType Directory -Force
+        New-Item -Path "secure_build/src/utils" -ItemType Directory -Force
         
-        # Simple recursive obfuscation from entry point
-        pyarmor obfuscate --recursive --output dist_obf src/backend/app.py
+        # Install Python code transformation tools
+        pip install pyminifier
         
-        # Create proper directory structure for frontend files
-        New-Item -Path "dist_obf/src" -ItemType Directory -Force -ErrorAction SilentlyContinue
+        # Apply basic code obfuscation to Python files
+        Get-ChildItem -Path "src" -Filter "*.py" -Recurse | ForEach-Object {
+          $relativePath = $_.FullName.Substring((Get-Location).Path.Length + 1)
+          $outputPath = Join-Path "secure_build" $relativePath
+          $outputDir = Split-Path -Path $outputPath -Parent
+          
+          # Ensure output directory exists
+          if (-not (Test-Path $outputDir)) {
+            New-Item -Path $outputDir -ItemType Directory -Force | Out-Null
+          }
+          
+          # Apply obfuscation using pyminifier
+          Write-Host "Securing: $relativePath"
+          python -m pyminifier --obfuscate-variables --obfuscate-functions --replacement-length=3 $_.FullName | Out-File -FilePath $outputPath -Encoding utf8
+        }
         
-        # Copy non-Python assets with proper structure
+        # Copy non-Python files (keeping directory structure)
+        Get-ChildItem -Path "src" -Recurse | Where-Object { -not $_.PSIsContainer -and $_.Extension -ne ".py" } | ForEach-Object {
+          $relativePath = $_.FullName.Substring((Get-Location).Path.Length + 1)
+          $outputPath = Join-Path "secure_build" $relativePath
+          $outputDir = Split-Path -Path $outputPath -Parent
+          
+          # Ensure output directory exists
+          if (-not (Test-Path $outputDir)) {
+            New-Item -Path $outputDir -ItemType Directory -Force | Out-Null
+          }
+          
+          # Copy the file
+          Copy-Item -Path $_.FullName -Destination $outputPath -Force
+        }
+        
+        # Copy frontend files
         if (Test-Path "src/frontend") {
-          Copy-Item -Path "src/frontend" -Destination "dist_obf/src/" -Recurse -Force
-          echo "Frontend files copied to dist_obf/src/frontend"
-          Get-ChildItem -Path "dist_obf/src/frontend" -Recurse | Select-Object FullName
-        } else {
-          echo "WARNING: Frontend directory not found at src/frontend"
+          Copy-Item -Path "src/frontend" -Destination "secure_build/src/" -Recurse -Force
+          echo "Frontend files copied to secure_build/src/frontend"
         }
         
         # Copy docs directory if it exists
         if (Test-Path "docs") {
-          Copy-Item -Path "docs" -Destination "dist_obf/" -Recurse -Force
-          echo "Docs copied to dist_obf/docs"
+          Copy-Item -Path "docs" -Destination "secure_build/" -Recurse -Force
+          echo "Docs copied to secure_build/docs"
         }
         
-        # Copy other assets if needed
-        if (Test-Path "static") {
-          Copy-Item -Path "static" -Destination "dist_obf/" -Recurse -Force
-        }
-        
-        # Verify obfuscation worked
-        if (Test-Path "dist_obf/app.py") {
-          echo "Obfuscation successful"
+        # Verify build was successful
+        if (Test-Path "secure_build/src/backend/app.py") {
+          echo "Code transformation successful"
         } else {
-          echo "Obfuscation failed - copying original files"
-          Copy-Item -Path "src/*" -Destination "dist_obf/" -Recurse -Force
+          echo "Code transformation failed"
           exit 1
         }
-        
-        # List final directory structure for verification
-        echo "Final dist_obf structure:"
-        Get-ChildItem -Path "dist_obf" -Recurse | Select-Object FullName
 
     - name: Build executable with PyInstaller
       run: |
-        # Verify frontend directory exists before building
-        if (Test-Path "dist_obf/src/frontend") {
-          echo "Frontend directory found at dist_obf/src/frontend"
+        # Find icon file
+        $iconParam = ""
+        if (Test-Path "src/frontend/images/icon_excel_comparison.ico") {
+          $iconParam = "--icon=src/frontend/images/icon_excel_comparison.ico"
+          echo "Using icon from: src/frontend/images/icon_excel_comparison.ico"
         } else {
-          echo "ERROR: Frontend directory not found at expected location"
-          Get-ChildItem -Path "dist_obf" -Recurse
-          exit 1
+          echo "No icon file found"
         }
         
-        # Build with PyInstaller - only add essential data files
+        # Build with PyInstaller (with --key for additional security)
         $version = "${{ steps.get_version.outputs.VERSION }}"
-        python -m PyInstaller --onefile --windowed `
+        $randomKey = [System.Guid]::NewGuid().ToString().Substring(0, 16)
+        
+        python -m PyInstaller --onefile --windowed $iconParam `
+          --key=$randomKey `
           --name "ECT_Technis_v$version" `
-          --add-data "dist_obf/src/frontend;src/frontend" `
-          --add-data "dist_obf/docs;docs" `
+          --add-data "secure_build/src/frontend;src/frontend" `
+          --add-data "secure_build/docs;docs" `
           --add-data "version.txt;." `
           --hidden-import "flask" `
           --hidden-import "flask_cors" `
@@ -144,9 +167,10 @@ jobs:
           --hidden-import "xlsxwriter" `
           --hidden-import "werkzeug" `
           --hidden-import "numpy" `
-          --paths="dist_obf" `
-          dist_obf/app.py
-
+          --paths="secure_build" `
+          --clean `
+          secure_build/src/backend/app.py
+        
         # Verify the build
         if (Test-Path "dist/ECT_Technis_v$version.exe") {
           echo "Build successful"
@@ -155,7 +179,7 @@ jobs:
           Get-ChildItem -Path "dist" -ErrorAction SilentlyContinue
           exit 1
         }
-
+        
     - name: Test executable
       run: |
         $version = "${{ steps.get_version.outputs.VERSION }}"
