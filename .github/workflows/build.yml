@@ -109,15 +109,20 @@ jobs:
     - name: Build executable with PyInstaller
       run: |
         
-        # Build with PyInstaller using direct parameters instead of spec file
+        # Build with PyInstaller - only add essential data files
         $version = "${{ steps.get_version.outputs.VERSION }}"
         python -m PyInstaller --onefile --windowed `
           --name "ECT_Technis_v$version" `
-          --icon "src/frontend/images/icon_excel_comparison.ico" `
+          --add-data "dist_obf/src/frontend;src/frontend" `
+          --add-data "docs;docs" `
           --add-data "version.txt;." `
-          --add-data "assets/*;assets" `
-          --add-data "templates/*;templates" `
-          --add-data "static/*;static" `
+          --hidden-import "flask" `
+          --hidden-import "pandas" `
+          --hidden-import "openpyxl" `
+          --hidden-import "xlsxwriter" `
+          --hidden-import "werkzeug" `
+          --hidden-import "flask_cors" `
+          --hidden-import "numpy" `
           --paths="dist_obf" `
           dist_obf/app.py
 
