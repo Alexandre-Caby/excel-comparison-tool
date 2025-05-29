@@ -124,39 +124,41 @@ jobs:
         
         # Prepare PyInstaller command
         $version = "${{ steps.get_version.outputs.VERSION }}"
-        $pyinstallerCmd = @(
-          "python", "-m", "PyInstaller", "--onefile", "--windowed",
-          "--name", "ECT_Technis_v$version",
-          "--add-data", "dist_build/frontend;src/frontend",
-          "--add-data", "version.txt;.",
-          "--hidden-import", "flask",
-          "--hidden-import", "flask_cors", 
-          "--hidden-import", "pandas",
-          "--hidden-import", "openpyxl",
-          "--hidden-import", "xlsxwriter",
-          "--hidden-import", "werkzeug",
-          "--hidden-import", "numpy",
-          "--paths=dist_build"
-        )
+        
+        # Construct command as a string instead of array
+        $cmd = "python -m PyInstaller --onefile --windowed " +
+               "--name ""ECT_Technis_v$version"" " +
+               "--add-data ""dist_build/frontend;src/frontend"" " +
+               "--add-data ""version.txt;."" " +
+               "--hidden-import flask " +
+               "--hidden-import flask_cors " + 
+               "--hidden-import pandas " +
+               "--hidden-import openpyxl " +
+               "--hidden-import xlsxwriter " +
+               "--hidden-import werkzeug " +
+               "--hidden-import numpy " +
+               "--paths=""dist_build"" "
         
         # Add docs if they exist
         if (Test-Path "dist_build/docs") {
-          $pyinstallerCmd += "--add-data", "dist_build/docs;docs"
+          $cmd += "--add-data ""dist_build/docs;docs"" "
+          echo "Including docs directory"
         }
         
         # Add icon if it exists
         if (Test-Path "dist_build/frontend/images/icon_excel_comparison.ico") {
-          $pyinstallerCmd += "--icon", "dist_build/frontend/images/icon_excel_comparison.ico"
+          $cmd += "--icon=""dist_build/frontend/images/icon_excel_comparison.ico"" "
           echo "Using custom icon: dist_build/frontend/images/icon_excel_comparison.ico"
         } else {
           echo "No custom icon found - using default Windows icon"
         }
         
         # Add the main script
-        $pyinstallerCmd += "dist_build/backend/app.py"
+        $cmd += "dist_build/backend/app.py"
         
-        # Execute PyInstaller
-        & $pyinstallerCmd
+        # Execute PyInstaller command
+        echo "Executing PyInstaller with command: $cmd"
+        Invoke-Expression $cmd
         
         # Verify the build
         if (Test-Path "dist/ECT_Technis_v$version.exe") {
