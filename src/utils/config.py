@@ -9,8 +9,8 @@ class Config:
     DEFAULT_CONFIG = {
         "app_name": "Excel Comparison Tool",
         "version": "1.0.0",
-        "temp_dir": "temp",
-        "reports_dir": "reports",
+        "temp_dir": "src/backend/temp",
+        "reports_dir": "src/backend/reports",
         "max_file_size_mb": 100,
         "allowed_extensions": [".xlsx", ".xls"],
         "default_comparison_options": {
@@ -26,8 +26,14 @@ class Config:
         },
         "logging": {
             "level": "INFO",
-            "file": "app.log",
+            "file": "src/backend/app.log",
             "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        },
+        "frontend": {
+            "images_dir": "src/frontend/images",
+            "pages_dir": "src/frontend/pages",
+            "css_dir": "src/frontend/css",
+            "js_dir": "src/frontend/js"
         }
     }
     
@@ -51,9 +57,9 @@ class Config:
                 config.update(user_config)
                 return config
             except Exception:
-                return self.DEFAULT_CONFIG
+                return self.DEFAULT_CONFIG.copy()
         else:
-            return self.DEFAULT_CONFIG
+            return self.DEFAULT_CONFIG.copy()
     
     def save_config(self) -> bool:
         """Save current configuration to file"""
@@ -68,32 +74,43 @@ class Config:
         """Get a configuration value by key"""
         # Support nested keys with dot notation (e.g., "ui_settings.theme")
         if "." in key:
-            main_key, sub_key = key.split(".", 1)
-            return self.config.get(main_key, {}).get(sub_key, default)
+            keys = key.split(".")
+            value = self.config
+            for k in keys:
+                value = value.get(k, {}) if isinstance(value, dict) else default
+            return value if value != {} else default
         return self.config.get(key, default)
     
     def set(self, key: str, value: Any) -> None:
         """Set a configuration value"""
         # Support nested keys with dot notation
         if "." in key:
-            main_key, sub_key = key.split(".", 1)
-            if main_key not in self.config:
-                self.config[main_key] = {}
-            self.config[main_key][sub_key] = value
+            keys = key.split(".")
+            config_ref = self.config
+            for k in keys[:-1]:
+                if k not in config_ref:
+                    config_ref[k] = {}
+                config_ref = config_ref[k]
+            config_ref[keys[-1]] = value
         else:
             self.config[key] = value
     
     def _ensure_directories(self) -> None:
         """Ensure required directories exist"""
         # Create temp directory if it doesn't exist
-        temp_dir = self.get("temp_dir", "temp")
+        temp_dir = self.get("temp_dir", "src/backend/temp")
         if not os.path.exists(temp_dir):
-            os.makedirs(temp_dir)
+            os.makedirs(temp_dir, exist_ok=True)
             
         # Create reports directory if it doesn't exist
-        reports_dir = self.get("reports_dir", "reports")
+        reports_dir = self.get("reports_dir", "src/backend/reports")
         if not os.path.exists(reports_dir):
-            os.makedirs(reports_dir)
+            os.makedirs(reports_dir, exist_ok=True)
+            
+        # Ensure frontend directories exist
+        images_dir = self.get("frontend.images_dir", "src/frontend/images")
+        if not os.path.exists(images_dir):
+            os.makedirs(images_dir, exist_ok=True)
 
 # Global config instance
 config = Config()

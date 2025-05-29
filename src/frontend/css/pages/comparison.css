@@ -1,0 +1,70 @@
+/* Comparison page specific styles */
+
+/* Metrics display */
+.metrics-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.metric-card {
+    background: linear-gradient(135deg, #007147 0%, #009d62 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 113, 71, 0.2);
+    transition: transform 0.2s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-4px);
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    color: white;
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Results sections */
+.results-section {
+    margin: 3rem 0;
+}
+
+.results-navigation {
+    margin: 2rem 0;
+}
+
+.results-tables {
+    margin: 2rem 0;
+}
+
+/* Progress bar */
+.progress-section {
+    margin: 2rem 0;
+}
+
+.progress {
+    height: 12px;
+    background-color: #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 1rem 0;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(135deg, #007147 0%, #009d62 100%);
+    transition: width 0.3s ease;
+    border-radius: 6px;
+}

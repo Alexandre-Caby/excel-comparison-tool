@@ -11,7 +11,7 @@
 
 ### Technical Improvements
 - Clean, optimized code structure
-- Streamlit-based user interface
+- Electron-based desktop application
 - Excel processing optimized for performance
 
 ### Bug Fixes

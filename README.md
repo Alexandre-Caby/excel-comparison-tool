@@ -1,110 +1,98 @@
-# Excel Comparison Tool
+# ECT Technis - Excel Comparison Tool
 
-A powerful tool for comparing and analyzing Excel files to identify differences, duplicates, and inconsistencies.
+A powerful tool for comparing and analyzing PREPA PHP Excel files with other Excel sources to identify differences and inconsistencies.
 
 ## Features
 
-- Compare two Excel files to identify differences
-- Match data by site or sheet names
-- Flexible column matching options
-- Generate detailed comparison reports
-- Export results in various formats
-- Interactive web-based interface
+- **File Comparison**: Compare PREPA PHP files with other Excel sources
+- **Site Matching**: Intelligent mapping using site codes (LE, BGL, etc.)
+- **Difference Detection**: Identify modifications between files
+- **Duplicate Detection**: Find duplicate entries across datasets
+- **Report Generation**: Create detailed Excel and CSV reports
+- **User-Friendly Interface**: Modern and intuitive web application
 
-## Usage Options
+## Architecture
 
-### Option 1: Standalone Executable (Recommended for Users)
+### Frontend
+- **HTML/CSS**: Modular structure and component system
+- **JavaScript**: Modular application logic with state management
+- **Responsive Interface**: Compatible with various devices and screen resolutions
 
-1. Download the latest release from the [Releases page](https://github.com/alexandre-caby/excel-comparison-tool/releases)
-2. Run the executable - no installation required
-3. The application will open in your default web browser
+### Backend
+- **REST API**: Endpoints for file processing
+- **Comparison Engine**: Advanced logic for analyzing Excel files
+- **Data Management**: Structured data processing
 
-### Option 2: Run from Source (For Developers)
+## User Guide
 
-#### Prerequisites
+Check our [complete user guide](./docs/user_guide.md) for detailed instructions on:
+- File uploads
+- Configuring comparisons
+- Interpreting results
+- Generating reports
 
-- Python 3.9 or higher
-- Required Python packages:
-  - streamlit
-  - pandas
-  - openpyxl
-  - xlsxwriter
+## Installation and Deployment
 
-#### Installation Steps
+### Prerequisites
+- Modern web browser (Chrome, Firefox, Edge)
+- Web server with Python support
 
-1. Clone the repository:
+### Development Setup
+
+1. **Clone the repository**
    ```bash
-   git clone https://github.com/alexandre-caby/excel-comparison-tool.git
+   git clone https://github.com/your-username/excel-comparison-tool.git
    cd excel-comparison-tool
    ```
 
-2. Install dependencies:
+2. **Install Python dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Run the application:
+3. **Start the backend**
    ```bash
-   streamlit run main.py
-   ```
-   if it doesn't work, run the build script:
-   ```bash
-   run_app.bat
+   python src/backend/app.py
    ```
 
-## Building the Executable
+4. **Open the interface in a browser**
+   ```
+   http://localhost:5000
+   ```
 
-To build your own standalone executable:
+## Project Structure
 
-### Method 1: Using the build script
-
-```bash
-# On Windows
-build.bat
+```
+excel-comparison-tool/
+├── docs/                   # Documentation
+│   ├── legal/              # Legal documents
+│   └── user_guide.md       # User guide
+├── src/
+│   ├── backend/            # Python server and API
+│   │   ├── app.py          # Application entry point
+│   ├── core/               # Business logic and Excel processing
+│   ├── electron/           # Electron app
+│   │   └── main.js         # Electron main process
+│   ├── models/             # Data models and schemas
+│   ├── utils/              # Utility functions
+│   └── frontend/           # User interface
+│       ├── css/            # CSS styles
+│       ├── js/             # JavaScript scripts
+│       ├── pages/          # HTML components
+│       ├── images/          # Images and icons
+│       └── index.html      # Main page
+├── requirements.txt        # Python dependencies
+├── package.json            # Node.js dependencies
+├── CHANGELOG.md            # Change log
+└── README.md
 ```
 
-### Method 2: Manual build with PyInstaller
+## Legal Information
 
-```bash
-# Install required build tools
-pip install pyinstaller
+- [Terms of Use](./docs/legal/terms_of_use.md)
+- [Privacy Policy](./docs/legal/privacy_policy.md)
+- [License](./docs/legal/licence.md)
 
-# Build the executable
-pyinstaller --onefile --noconsole --add-data "src;src" --add-data "static;static" --name "Excel_Comparison_Tool" run.py
-```
+## Support
 
-## How to Use
-
-1. **Upload Files**: 
-   - Upload your base PREPA PHP file
-   - Upload one or more comparison files
-
-2. **Configure Comparison**:
-   - Select sheets to compare
-   - Configure site mappings (e.g., "LE" → "lens")
-
-3. **View Results**:
-   - Browse differences between files 
-   - Identify modified entries
-   - Check for duplicate records
-
-4. **Export Reports**:
-   - Generate Excel or CSV reports
-   - Save for future reference
-
-## Security
-
-The standalone executable includes code obfuscation to protect intellectual property. When building from source, the GitHub Actions workflow automatically handles obfuscation using PyArmor.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Acknowledgments
-
-- Streamlit for the web interface framework
-- Pandas for the data processing capabilities
+For questions or support, please contact [alexandre.caby@sncf.fr](mailto:alexandre.caby@sncf.fr).

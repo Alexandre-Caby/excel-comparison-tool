@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECT Technis</title>
+    <link rel="icon" type="image/x-icon" href="images/icon_excel_comparison.ico">
+    <!-- Single CSS import that handles all imports -->
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="logo-container">
+                <img src="images/logo_excel_comparison.png" class="logo" alt="ECT Technis" 
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <div style="display:none; color:white; text-align:center; font-weight:bold; font-size:1.2rem;">
+                    ECT Technis
+                </div>
+            </div>
+            
+            <div class="nav-menu">
+                <button class="nav-button active" data-page="home">
+                    <span class="icon">🏠</span> Accueil
+                </button>
+                <button class="nav-button" data-page="upload">
+                    <span class="icon">📁</span> Téléchargement
+                </button>
+                <button class="nav-button" data-page="comparison">
+                    <span class="icon">🔍</span> Comparaison
+                </button>
+                <button class="nav-button" data-page="reports">
+                    <span class="icon">📊</span> Rapports
+                </button>
+            </div>
+        </nav>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <div id="page-container">
+                <!-- Page content will be loaded here -->
+            </div>
+            
+            <!-- Help Button - Fixed in corner of each page -->
+            <button id="help-button" class="help-fab" title="Aide" aria-label="Obtenir de l'aide">
+                <span class="help-icon">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="white" stroke-width="2"/>
+                        <path d="M12 17V17.01" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M12 13.5C11.9816 13.1754 12.0692 12.8536 12.2495 12.5833C12.4299 12.313 12.6938 12.1101 13 12C13.3729 11.8593 13.7058 11.6423 13.9688 11.3652C14.2318 11.0881 14.4168 10.7597 14.5059 10.4077C14.5951 10.0557 14.5858 9.6897 14.4788 9.34233C14.3718 8.99495 14.1705 8.67581 13.8944 8.41182C13.6183 8.14783 13.2761 7.94701 12.8986 7.82624C12.5212 7.70548 12.1193 7.66824 11.7257 7.71756C11.3321 7.76689 10.959 7.90132 10.6386 8.1088C10.3183 8.31628 10.0596 8.58965 9.88 8.91" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </span>
+            </button>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>&copy; 2025 ECT Technis - Tous droits réservés</p>
+                <div class="footer-links">
+                    <a href="#" id="legal-link" class="footer-link">Mentions Légales</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>Traitement en cours...</p>
+    </div>
+    
+    <!-- JavaScript Files -->
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/upload.js"></script>
+    <script src="js/comparison.js"></script>
+    <script src="js/reports.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

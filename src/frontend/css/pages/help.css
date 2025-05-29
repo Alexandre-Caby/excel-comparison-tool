@@ -1,0 +1,182 @@
+/* Help page specific styles */
+
+.help-card {
+    background-color: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+    margin-bottom: 2.5rem;
+    overflow: hidden;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    transition: all 0.3s ease;
+}
+
+.help-body {
+    padding: 2.5rem;
+    color: #475569;
+    font-size: 1.05rem;
+    line-height: 1.7;
+}
+
+/* Table of contents styling */
+.toc-container {
+    background: linear-gradient(135deg, rgba(0, 113, 71, 0.02) 0%, rgba(0, 113, 71, 0.08) 100%);
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(0, 113, 71, 0.1);
+}
+
+.toc-container h2 {
+    color: #007147;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    font-size: 1.4rem;
+    border-bottom: 2px solid rgba(0, 113, 71, 0.1);
+    padding-bottom: 0.75rem;
+}
+
+.toc-list {
+    list-style-type: none;
+    padding-left: 0;
+    margin-bottom: 0;
+}
+
+.toc-item {
+    margin-bottom: 0.5rem;
+    transition: transform 0.2s ease;
+}
+
+.toc-level-1 {
+    font-weight: 600;
+}
+
+.toc-level-2 {
+    padding-left: 1.5rem;
+    font-weight: 500;
+}
+
+.toc-level-3 {
+    padding-left: 3rem;
+    font-weight: 400;
+    font-size: 0.95rem;
+}
+
+.toc-link {
+    color: #007147;
+    text-decoration: none;
+    display: block;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.toc-link:hover {
+    background-color: rgba(0, 113, 71, 0.08);
+    color: #005a38;
+    transform: translateX(5px);
+    text-decoration: none;
+}
+
+/* Content styling */
+.help-content {
+    margin-top: 2rem;
+}
+
+.help-heading {
+    color: #007147;
+    margin: 1.5rem 0 1rem;
+    padding-bottom: 0.5rem;
+    scroll-margin-top: 2rem; /* For smooth scrolling */
+}
+
+.help-h1 {
+    font-size: 1.8rem;
+    border-bottom: 2px solid rgba(0, 113, 71, 0.1);
+    padding-bottom: 0.75rem;
+    margin-top: 2.5rem;
+}
+
+.help-h2 {
+    font-size: 1.5rem;
+    color: #007147;
+    margin-top: 2rem;
+}
+
+.help-h3 {
+    font-size: 1.2rem;
+    color: #333333;
+    margin-top: 1.5rem;
+}
+
+.help-paragraph {
+    margin-bottom: 1.25rem;
+    line-height: 1.8;
+}
+
+.help-list {
+    margin: 1.5rem 0;
+    padding-left: 2rem;
+}
+
+.help-list-item {
+    margin-bottom: 0.75rem;
+    line-height: 1.6;
+}
+
+.help-link {
+    color: #007147;
+    text-decoration: underline;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.help-link:hover {
+    color: #005a38;
+    text-decoration: underline;
+}
+
+/* Section dividers */
+.help-content > h2::before {
+    content: '';
+    display: block;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(0, 113, 71, 0.2) 0%, rgba(0, 113, 71, 0) 100%);
+    margin-bottom: 1rem;
+    width: 100%;
+}
+
+/* Print styles for help content */
+@media print {
+    .toc-container {
+        background: none;
+        border: 1px solid #ccc;
+    }
+    
+    .help-link {
+        color: #000;
+        text-decoration: underline;
+    }
+    
+    .help-heading {
+        color: #000;
+        break-after: avoid;
+    }
+    
+    .help-list {
+        break-inside: avoid;
+    }
+}
+
+/* Loading state */
+.loading-docs {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5rem 0;
+    color: #64748b;
+}
+
+.doc-container {
+    min-height: 500px;
+}

@@ -1,0 +1,254 @@
+/* Upload page specific styles */
+
+.upload-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.upload-section {
+    animation: fadeInUp 0.4s ease-out;
+}
+
+.file-upload-area {
+    border: 2px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    background-color: #f8fafc;
+    cursor: pointer;
+}
+
+.file-upload-area:hover {
+    border-color: #007147;
+    background-color: rgba(0, 113, 71, 0.05);
+}
+
+.file-upload-area.dragover {
+    border-color: #007147;
+    background-color: rgba(0, 113, 71, 0.1);
+    transform: scale(1.01);
+}
+
+.upload-prompt p {
+    margin: 0.5rem 0;
+}
+
+.upload-prompt p:first-child {
+    font-size: 1.1rem;
+    color: #2d3748;
+}
+
+.upload-hint {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: #64748b;
+    font-style: italic;
+}
+
+.file-info {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background-color: #f0f9ff;
+    border-left: 4px solid #007147;
+    border-radius: 4px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.file-item {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.file-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* Configuration section */
+.comparison-config {
+    animation: fadeInUp 0.5s ease-out;
+    margin-top: 2rem;
+}
+
+.config-section {
+    margin-bottom: 2rem;
+}
+
+.config-section label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: #334155;
+}
+
+.config-section select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background-color: white;
+    font-size: 1rem;
+    color: #334155;
+    transition: all 0.2s ease;
+    margin-bottom: 0.5rem;
+}
+
+.config-section select:focus {
+    border-color: #007147;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 113, 71, 0.15);
+}
+
+.help-text {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+/* Site mapping styles - Enhanced styling */
+.site-mapping {
+    background-color: #f8fafc;
+    border-radius: 8px;
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+}
+
+.mapping-input {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.mapping-input input {
+    flex: 1;
+    min-width: 120px;
+    padding: 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.mapping-input input:focus {
+    border-color: #007147;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 113, 71, 0.15);
+}
+
+.mapping-input select {
+    flex: 2;
+    min-width: 200px;
+}
+
+.mapping-input button {
+    min-width: 100px;
+    padding: 0.75rem 1.25rem;
+}
+
+.mappings-display {
+    background-color: white;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+}
+
+#mappings-list {
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.mapping-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
+    animation: fadeIn 0.3s ease;
+}
+
+.mapping-item:last-child {
+    border-bottom: none;
+}
+
+.mapping-item span {
+    font-size: 1rem;
+}
+
+.mapping-item strong {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background-color: #007147;
+    color: white;
+    border-radius: 4px;
+    font-weight: 600;
+    margin-right: 0.5rem;
+}
+
+.mapping-item .btn-remove {
+    background-color: transparent;
+    color: #ef4444;
+    border: 1px solid #ef4444;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.mapping-item .btn-remove:hover {
+    background-color: #ef4444;
+    color: white;
+}
+
+.no-mappings {
+    text-align: center;
+    padding: 2rem;
+    color: #64748b;
+    font-style: italic;
+}
+
+.config-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+    gap: 1rem;
+}
+
+.config-actions button {
+    flex: 1;
+    padding: 1rem;
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .upload-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .mapping-input {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .mapping-input input,
+    .mapping-input select,
+    .mapping-input button {
+        width: 100%;
+    }
+    
+    .config-actions {
+        flex-direction: column;
+    }
+}

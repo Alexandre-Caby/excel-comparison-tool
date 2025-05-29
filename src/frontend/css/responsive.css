@@ -1,0 +1,130 @@
+/* Responsive design utilities */
+
+/* Breakpoints */
+/* xs: 0-575px */
+/* sm: 576-767px */
+/* md: 768-991px */
+/* lg: 992-1199px */
+/* xl: 1200px+ */
+
+/* Small screens (mobile) */
+@media (max-width: 575.98px) {
+    .container {
+        padding: 0 var(--spacing-sm);
+    }
+    
+    .main-title {
+        font-size: var(--font-size-2xl);
+    }
+    
+    .btn {
+        min-width: 100px;
+        font-size: var(--font-size-sm);
+    }
+    
+    .card {
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .card-header {
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: var(--font-size-base);
+    }
+    
+    .card-body {
+        padding: var(--spacing-md);
+    }
+    
+    /* Hide/show utilities for mobile */
+    .d-xs-none { display: none !important; }
+    .d-xs-block { display: block !important; }
+    .d-xs-flex { display: flex !important; }
+}
+
+/* Medium screens (tablets) */
+@media (min-width: 576px) and (max-width: 991.98px) {
+    .d-sm-none { display: none !important; }
+    .d-sm-block { display: block !important; }
+    .d-sm-flex { display: flex !important; }
+}
+
+/* Large screens (desktop) */
+@media (min-width: 992px) {
+    .d-lg-none { display: none !important; }
+    .d-lg-block { display: block !important; }
+    .d-lg-flex { display: flex !important; }
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .sidebar {
+        display: none !important;
+    }
+    
+    .main-content {
+        margin-left: 0 !important;
+    }
+    
+    .btn {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none !important;
+        border: 1px solid var(--border-color) !important;
+    }
+    
+    .page {
+        page-break-after: always;
+    }
+    
+    .page:last-child {
+        page-break-after: auto;
+    }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    :root {
+        --border-color: var(--black);
+        --text-secondary: var(--black);
+        --shadow-color: var(--black);
+    }
+    
+    .btn {
+        border-width: 2px;
+    }
+    
+    .card {
+        border-width: 2px;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Dark mode support (future enhancement) */
+@media (prefers-color-scheme: dark) {
+    .auto-dark {
+        --background: var(--gray-900);
+        --background-secondary: var(--gray-800);
+        --card-background: var(--gray-800);
+        --text-primary: var(--gray-100);
+        --text-secondary: var(--gray-300);
+        --border-color: var(--gray-700);
+        --input-background: var(--gray-700);
+    }
+}

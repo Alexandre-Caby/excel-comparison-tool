@@ -1,0 +1,99 @@
+<div class="page-header">
+    <h1>Rapports de Comparaison</h1>
+    <p>Consultez et exportez vos rapports de comparaison Excel</p>
+</div>
+
+<div class="report-selector">
+    <div class="card">
+        <div class="card-header">📋 Sélection du Rapport</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-8">
+                    <label for="report-select">Choisir un rapport :</label>
+                    <select id="report-select">
+                        <option value="">Sélectionner un rapport...</option>
+                    </select>
+                </div>
+                <div class="col-4">
+                    <label>&nbsp;</label>
+                    <button class="btn primary-btn" id="load-report-btn" disabled>
+                        📊 Charger le Rapport
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="report-content" style="display: none;">
+    <div class="report-details">
+        <div class="card">
+            <div class="card-header">📈 Résumé du Rapport</div>
+            <div class="card-body">
+                <div class="summary-metrics">
+                    <div class="metric-card">
+                        <div class="metric-value" id="report-sheets">0</div>
+                        <div class="metric-label">Feuilles analysées</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="report-differences">0</div>
+                        <div class="metric-label">Différences trouvées</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="report-duplicates">0</div>
+                        <div class="metric-label">Doublons détectés</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="report-date">-</div>
+                        <div class="metric-label">Date d'analyse</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="reports-table-container">
+        <div class="card">
+            <div class="card-header">📊 Données Détaillées</div>
+            <div class="card-body">
+                <div id="report-table-content">
+                    <p class="no-data">Chargez un rapport pour voir les données détaillées</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="export-section">
+        <div class="card">
+            <div class="card-header">💾 Export du Rapport</div>
+            <div class="card-body">
+                <div class="export-controls">
+                    <div class="radio-group">
+                        <label><input type="radio" name="export-format" value="excel" checked> Excel (.xlsx)</label>
+                        <label><input type="radio" name="export-format" value="csv"> CSV</label>
+                        <label><input type="radio" name="export-format" value="pdf"> PDF</label>
+                    </div>
+                    
+                    <div class="filename-input">
+                        <label for="export-filename">Nom du fichier :</label>
+                        <input type="text" id="export-filename" placeholder="rapport_comparaison">
+                    </div>
+                    
+                    <div class="export-actions">
+                        <button class="btn primary-btn" id="export-report-btn">
+                            💾 Exporter le Rapport
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="no-reports" class="info-box">
+    <h3>Aucun rapport disponible</h3>
+    <p>Effectuez une comparaison pour générer des rapports.</p>
+    <button class="btn primary-btn" onclick="app.navigateToPage('upload')">
+        📁 Aller au Téléchargement
+    </button>
+</div>

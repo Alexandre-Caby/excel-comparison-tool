@@ -1,0 +1,49 @@
+/* Legal page specific styles */
+
+/* Legal tabs styling */
+.legal-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 0;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.legal-tab {
+    padding: 1rem 1.5rem;
+    background-color: #f7fafc;
+    border: 2px solid #e2e8f0;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    font-weight: 500;
+    color: #4a5568;
+    transition: all 0.2s ease;
+    position: relative;
+    bottom: -2px;
+}
+
+.legal-tab:hover {
+    background-color: #edf2f7;
+    color: #2d3748;
+}
+
+.legal-tab.active {
+    background-color: white;
+    color: #007147;
+    border-color: #007147;
+    border-bottom: 2px solid white;
+    font-weight: 600;
+}
+
+.doc-container {
+    position: relative;
+    min-height: 300px;
+}
+
+.loading-docs {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+}

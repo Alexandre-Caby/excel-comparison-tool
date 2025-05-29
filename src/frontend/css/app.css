@@ -1,0 +1,341 @@
+/* Import variables and base styles */
+@import url('variables.css');
+@import url('base.css');
+@import url('layout.css');
+@import url('components.css');
+@import url('buttons.css');
+
+/* Import page-specific styles */
+@import url('pages/home.css');
+@import url('pages/upload.css');
+@import url('pages/comparison.css');
+@import url('pages/legal.css');
+@import url('pages/help.css');
+
+/* Core application styles */
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #f8fafc;
+    color: #334155;
+    line-height: 1.6;
+}
+
+/* App container */
+.app-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f8fafc;
+}
+
+/* Modern sleek sidebar - Using existing green colors */
+.sidebar {
+    width: 280px;
+    background: linear-gradient(180deg, #007147 0%, #005a38 100%);
+    color: white;
+    padding: 0;
+    position: fixed;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 999;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Logo area - Enhanced visibility */
+.logo-container {
+    text-align: center;
+    padding: 2rem 1.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+}
+
+.logo {
+    width: 140px;
+    height: auto;
+    filter: brightness(0) invert(1); /* Makes logo white */
+    transition: all 0.3s ease;
+}
+
+.logo:hover {
+    transform: scale(1.05);
+    filter: brightness(0) invert(1) drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
+}
+
+/* Navigation menu - Improved spacing and visibility */
+.nav-menu {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    margin-top: 0.5rem;
+    flex-grow: 1;
+}
+
+.nav-button {
+    background-color: transparent;
+    color: rgba(255, 255, 255, 0.9);
+    border: none;
+    padding: 1rem 1.5rem;
+    margin-bottom: 0.75rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    font-weight: 500;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-button:before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 4px;
+    background-color: transparent;
+    transition: all 0.3s ease;
+}
+
+.nav-button:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: white;
+    transform: translateX(8px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.nav-button.active {
+    background-color: white;
+    color: #007147;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    transform: translateX(4px);
+}
+
+.nav-button.active:before {
+    background-color: #FFD250; /* Using the warning color from variables */
+    width: 6px;
+}
+
+/* Main content area */
+.main-content {
+    margin-left: 280px;
+    flex: 1;
+    padding: 2.5rem;
+    background-color: #f8fafc;
+    min-height: 100vh;
+}
+
+/* Page header */
+.page-header {
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 3px solid rgba(0, 113, 71, 0.1);
+    position: relative;
+    background: linear-gradient(135deg, rgba(0, 113, 71, 0.02) 0%, rgba(0, 90, 56, 0.05) 100%);
+    padding: 2rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    animation: fadeInUp 0.4s ease-out;
+}
+
+.page-header:after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 2rem;
+    width: 80px;
+    height: 3px;
+    background: linear-gradient(90deg, #007147 0%, #009d62 100%);
+    border-radius: 2px;
+}
+
+.page-header h1 {
+    color: #007147;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+}
+
+.page-header p {
+    color: #64748b;
+    font-size: 1.2rem;
+    max-width: 800px;
+    line-height: 1.7;
+    margin: 0;
+}
+
+/* Footer */
+.footer {
+    position: fixed;
+    bottom: 0;
+    left: 280px;
+    right: 0;
+    padding: 1.0rem 2.0rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(226, 232, 240, 0.8);
+    z-index: 100;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.footer-links {
+    display: flex;
+    gap: 2rem;
+}
+
+.footer-link {
+    color: #007147;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.footer-link:hover {
+    color: #005a38;
+    text-decoration: underline;
+}
+
+/* Help Floating Action Button - Updated design */
+.help-fab {
+    position: fixed;
+    bottom: 6rem;
+    right: 2.5rem;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #007147 0%, #009d62 100%);
+    color: white;
+    border: none;
+    box-shadow: 0 6px 20px rgba(0, 113, 71, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 99;
+    transition: all 0.3s ease;
+}
+
+.help-icon {
+    font-size: 1.6rem;
+    color: white;
+}
+
+.help-fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 8px 25px rgba(0, 113, 71, 0.4);
+}
+
+.help-fab:active {
+    transform: scale(0.95);
+}
+
+/* Animation for page load */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Loading overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    color: white;
+}
+
+.loading-spinner {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 1rem;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #007147;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+    .main-content {
+        padding: 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+    }
+    
+    .main-content {
+        margin-left: 0;
+        padding: 1.5rem;
+    }
+    
+    .footer {
+        left: 0;
+    }
+    
+    .page-header h1 {
+        font-size: 2rem;
+    }
+    
+    .nav-menu {
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 0.5rem;
+    }
+    
+    .nav-button {
+        padding: 0.75rem;
+        min-width: auto;
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+/* Accessibility improvements */
+.nav-button:focus,
+.btn:focus {
+    outline: 3px solid rgba(0, 113, 71, 0.5);
+    outline-offset: 2px;
+}

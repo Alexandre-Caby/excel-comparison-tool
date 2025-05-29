@@ -1,0 +1,125 @@
+<!-- Comparison Page -->
+<div id="comparison-page" class="page">
+    <div class="page-header">
+        <h1>Comparaison de Fichiers</h1>
+        <p>Analysez et comparez vos fichiers Excel pour identifier les différences</p>
+    </div>
+
+    <div id="comparison-container">
+        <div class="info-box">
+            <h3>Prêt à analyser</h3>
+            <p>Les fichiers ont été téléchargés et configurés. Vous pouvez maintenant lancer la comparaison.</p>
+            <button class="btn primary-btn" id="start-comparison-btn">
+                🔍 Lancer la Comparaison
+            </button>
+        </div>
+
+        <div id="comparison-progress" class="progress-section" style="display: none;">
+            <div class="card">
+                <div class="card-header">Progression de l'analyse</div>
+                <div class="card-body">
+                    <div class="progress">
+                        <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+                    </div>
+                    <p id="progress-text">Initialisation...</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="comparison-results" class="results-section" style="display: none;">
+            <div class="metrics-container">
+                <div class="metric-card">
+                    <div class="metric-value" id="total-sheets">0</div>
+                    <div class="metric-label">Feuilles comparées</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="total-differences">0</div>
+                    <div class="metric-label">Différences trouvées</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="total-cells">0</div>
+                    <div class="metric-label">Cellules analysées</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="execution-time">0s</div>
+                    <div class="metric-label">Temps d'exécution</div>
+                </div>
+            </div>
+
+            <div class="results-navigation">
+                <div class="card">
+                    <div class="card-header">Navigation dans les résultats</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="sheet-selector">
+                                    <label for="sheet-select">Sélectionner une feuille :</label>
+                                    <select id="sheet-select" class="form-control">
+                                        <option value="">Choisir une feuille...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="file-selector">
+                                    <label for="file-select">Type de données :</label>
+                                    <select id="file-select" class="form-control">
+                                        <option value="differences">Différences</option>
+                                        <option value="duplicates">Doublons</option>
+                                        <option value="summary">Résumé</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="results-tables">
+                <div class="differences-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4>🔍 Différences détectées</h4>
+                        </div>
+                        <div class="card-body">
+                            <div id="differences-content">
+                                <p class="no-data">Sélectionnez une feuille pour voir les différences</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="duplicates-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4>📋 Doublons identifiés</h4>
+                        </div>
+                        <div class="card-body">
+                            <div id="duplicates-content">
+                                <p class="no-data">Sélectionnez une feuille pour voir les doublons</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions-section">
+                <div class="card">
+                    <div class="card-header">Actions disponibles</div>
+                    <div class="card-body">
+                        <div class="action-buttons">
+                            <button class="btn primary-btn" onclick="app.navigateToPage('reports')">
+                                📊 Voir les Rapports
+                            </button>
+                            <button class="btn secondary-btn" id="export-results-btn">
+                                💾 Exporter les Résultats
+                            </button>
+                            <button class="btn secondary-btn" onclick="app.navigateToPage('upload')">
+                                🔄 Nouvelle Comparaison
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

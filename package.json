@@ -1,0 +1,34 @@
+{
+  "name": "excel-comparison-tool",
+  "version": "1.0.0",
+  "description": "ECT Technis - Excel Comparison Tool",
+  "main": "src/electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently --kill-others \"python src/backend/app.py\" \"wait-on http://localhost:5000 && electron .\"",
+    "backend": "python src/backend/app.py",
+    "frontend": "electron .",
+    "web": "python src/backend/app.py",
+    "build": "electron-builder",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "electron": "^25.0.0",
+    "electron-builder": "^24.0.0",
+    "wait-on": "^7.0.1"
+  },
+  "dependencies": {},
+  "build": {
+    "appId": "com.ect.technis",
+    "productName": "ECT Technis",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/electron/**/*",
+      "src/frontend/**/*"
+    ]
+  }
+}

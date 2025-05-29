@@ -96,7 +96,7 @@ We may update this Privacy Policy from time to time. We will notify you of signi
 
 If you have any questions about this Privacy Policy, please contact us at:
 
-[alexandre.caby@sncf.fr](mailto:alexandre.caby@sncf.fr)
+Email: [alexandre.caby@sncf.fr](mailto:alexandre.caby@sncf.fr)
 
 ## 10. Consent
 

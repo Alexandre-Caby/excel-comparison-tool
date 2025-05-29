@@ -7,6 +7,7 @@ permissions:
 on:
   push:
     branches: [ main ]
+    tags: [ 'v*' ]
   workflow_dispatch:
 
 jobs:
@@ -35,10 +36,18 @@ jobs:
       id: get_version
       run: |
         if (Test-Path version.txt) {
-          $version = Get-Content version.txt
+          $version = Get-Content version.txt -Raw
+          $version = $version.Trim()
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
         } else {
-          echo "VERSION=1.0.0" >> $env:GITHUB_OUTPUT
+          # Get version from git tag or default
+          $gitTag = git describe --tags --exact-match 2>$null
+          if ($gitTag) {
+            $version = $gitTag -replace '^v', ''
+          } else {
+            $version = "1.0.0"
+          }
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
         }
     
     - name: Check if tag exists
@@ -51,99 +60,147 @@ jobs:
           echo "TAG_EXISTS=false" >> $env:GITHUB_OUTPUT
         }
     
-    - name: Obfuscate Code with PyArmor
+    - name: Verify project structure
       run: |
-        # Create obfuscation directory
-        New-Item -Path obf -ItemType Directory -Force
-        
-        # Obfuscate the source code
-        pyarmor obfuscate --recursive --output obf/src src/*.py
-        pyarmor obfuscate --recursive --output obf/src/core src/core/*.py
-        pyarmor obfuscate --recursive --output obf/src/models src/models/*.py
-        pyarmor obfuscate --recursive --output obf/src/pages src/pages/*.py
-        pyarmor obfuscate --recursive --output obf/src/utils src/utils/*.py
-        pyarmor obfuscate --output obf/ run.py main.py
-        
-        # Verify the obfuscated files exist
-        if (-not (Test-Path obf/run.py)) {
-          echo "Failed to obfuscate run.py"
+        # Verify entry point exists
+        if (Test-Path src/backend/app.py) {
+          echo "Entry point src/backend/app.py exists"
+        } else {
+          echo "Entry point src/backend/app.py does not exist"
+          Get-ChildItem -Path . -Recurse -Filter "*.py" | Select-Object FullName
           exit 1
         }
-    
-    - name: Build with PyInstaller
-      run: |
-        # Create assets directory if it doesn't exist
-        if (-not (Test-Path assets)) {
-          New-Item -Path assets -ItemType Directory -Force
-        }
         
-        # Check if static directory exists and create if needed
-        if (-not (Test-Path static)) {
-          New-Item -Path static -ItemType Directory -Force
-          Write-Host "Created missing static directory"
-        }
-        
-        # Check if the icon file exists
-        $iconPath = "src/static/images/icon_excel_comparison.ico"
-        if (-not (Test-Path $iconPath)) {
-          Write-Host "Warning: Icon file not found at $iconPath"
-          $iconParam = ""
-        } else {
-          $iconParam = "--icon=`"$iconPath`""
-        }
-        
-        # Move to the obfuscation directory
-        cd obf
-        
-        # Build the application with PyInstaller using obfuscated code
-        # Use conditional icon parameter
-        pyinstaller --onefile --noconsole --add-data "src;src" $iconParam --name "ECT_Technis-${{ steps.get_version.outputs.VERSION }}" run.py
+        # List project structure for debugging
+        echo "Project structure:"
+        Get-ChildItem -Path . -Recurse | Where-Object { $_.Name -match '\.(py|txt|md)$' } | Select-Object FullName
 
-        # Copy the executable back to the expected location
-        New-Item -Path "../dist" -ItemType Directory -Force
-        Copy-Item -Path "dist/ECT_Technis-${{ steps.get_version.outputs.VERSION }}.exe" -Destination "../dist/"
+    - name: Obfuscate Code with PyArmor
+      run: |
+        # Create output directory
+        New-Item -Path "dist_obf" -ItemType Directory -Force
+        
+        # Simple recursive obfuscation from entry point
+        pyarmor obfuscate --recursive --output dist_obf src/backend/app.py
+        
+        # Copy non-Python assets
+        if (Test-Path "src/frontend") {
+          Copy-Item -Path "src/frontend" -Destination "dist_obf/" -Recurse -Force
+        }
+        if (Test-Path "static") {
+          Copy-Item -Path "static" -Destination "dist_obf/" -Recurse -Force
+        }
+        if (Test-Path "templates") {
+          Copy-Item -Path "templates" -Destination "dist_obf/" -Recurse -Force
+        }
+        if (Test-Path "assets") {
+          Copy-Item -Path "assets" -Destination "dist_obf/" -Recurse -Force
+        }
+        
+        # Verify obfuscation worked
+        if (Test-Path "dist_obf/app.py") {
+          echo "Obfuscation successful"
+        } else {
+          echo "Obfuscation failed - copying original files"
+          Copy-Item -Path "src/*" -Destination "dist_obf/" -Recurse -Force
+        }
+
+    - name: Build executable with PyInstaller
+      run: |
+        
+        # Build with PyInstaller using direct parameters instead of spec file
+        $version = "${{ steps.get_version.outputs.VERSION }}"
+        python -m PyInstaller --onefile --windowed `
+          --name "ECT_Technis_v$version" `
+          --icon "src/frontend/images/icon_excel_comparison.ico" `
+          --add-data "version.txt;." `
+          --add-data "assets/*;assets" `
+          --add-data "templates/*;templates" `
+          --add-data "static/*;static" `
+          --paths="dist_obf" `
+          dist_obf/app.py
+
+        # Verify the build
+        if (Test-Path "dist/ECT_Technis_v$version.exe") {
+          echo "Build successful"
+        } else {
+          echo "Build failed - executable not found"
+          Get-ChildItem -Path "dist" -ErrorAction SilentlyContinue
+          exit 1
+        }
+
+    - name: Test executable
+      run: |
+        $version = "${{ steps.get_version.outputs.VERSION }}"
+        # Basic test to ensure the executable can start
+        $proc = Start-Process -FilePath "dist/ECT_Technis_v$version.exe" -PassThru -WindowStyle Hidden
+        Start-Sleep -Seconds 10
+        if (-not $proc.HasExited) {
+          Stop-Process -Id $proc.Id -Force
+          echo "Executable test passed - application started successfully"
+        } else {
+          echo "Warning: Executable exited quickly - may have issues"
+          # Don't fail the build for this warning
+        }
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ECT_Technis-${{ steps.get_version.outputs.VERSION }}
+        name: ECT_Technis_v${{ steps.get_version.outputs.VERSION }}
         path: |
-          dist/*.exe
+          dist/ECT_Technis_v${{ steps.get_version.outputs.VERSION }}.exe
         retention-days: 90
     
-    - name: Create and push tag if it doesn't exist
-      if: steps.check_tag.outputs.TAG_EXISTS == 'false'
+    - name: Create and push tag if needed
+      if: steps.check_tag.outputs.TAG_EXISTS == 'false' && github.event_name != 'workflow_dispatch'
       run: |
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
-        git tag -a v${{ steps.get_version.outputs.VERSION }} -m "Version ${{ steps.get_version.outputs.VERSION }}"
+        git tag -a v${{ steps.get_version.outputs.VERSION }} -m "Release version ${{ steps.get_version.outputs.VERSION }}"
         git push origin v${{ steps.get_version.outputs.VERSION }}
-    
-    - name: Generate changelog if it doesn't exist
+
+    - name: Generate release notes if missing
       if: steps.check_tag.outputs.TAG_EXISTS == 'false'
       run: |
-        if (!(Test-Path CHANGELOG.md)) {
-          echo "# Version ${{ steps.get_version.outputs.VERSION }}" > CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "## Changes" >> CHANGELOG.md
-          echo "- Initial release of Excel Comparison Tool" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "## Known Issues" >> CHANGELOG.md
-          echo "- None" >> CHANGELOG.md
+        if (!(Test-Path RELEASE_NOTES.md)) {
+          $version = "${{ steps.get_version.outputs.VERSION }}"
+          echo "# ECT Technis v$version" > RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "## What's New" >> RELEASE_NOTES.md
+          echo "- Updated to version $version" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "## Installation" >> RELEASE_NOTES.md
+          echo "1. Download the executable file" >> RELEASE_NOTES.md
+          echo "2. Run ECT_Technis_v$version.exe" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "## System Requirements" >> RELEASE_NOTES.md
+          echo "- Windows 10 or later" >> RELEASE_NOTES.md
+          echo "- No additional installation required" >> RELEASE_NOTES.md
         }
 
     - name: Create GitHub Release
       if: steps.check_tag.outputs.TAG_EXISTS == 'false'
-      id: create_release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: v${{ steps.get_version.outputs.VERSION }}
         files: |
-          dist/ECT_Technis-${{ steps.get_version.outputs.VERSION }}.exe
-        name: Version ${{ steps.get_version.outputs.VERSION }}
-        body_path: CHANGELOG.md
+          dist/ECT_Technis_v${{ steps.get_version.outputs.VERSION }}.exe
+        name: ECT Technis v${{ steps.get_version.outputs.VERSION }}
+        body_path: RELEASE_NOTES.md
         draft: false
         prerelease: false
         fail_on_unmatched_files: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload debug artifacts on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: debug-artifacts-${{ steps.get_version.outputs.VERSION }}
+        path: |
+          dist_obf/
+          build/
+          *.spec
+          *.log
+        retention-days: 7

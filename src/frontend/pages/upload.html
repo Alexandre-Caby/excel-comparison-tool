@@ -1,0 +1,102 @@
+<!-- Upload Page -->
+<div id="upload-page" class="page">
+    <div class="page-header">
+        <h1>Téléchargement de Fichiers</h1>
+        <p>Importez vos fichiers Excel pour commencer la comparaison</p>
+    </div>
+
+    <div class="upload-container">
+        <div class="upload-section">
+            <div class="card">
+                <div class="card-header">📁 Fichier PREPA PHP (Base)</div>
+                <div class="card-body">
+                    <div class="file-upload-area" id="base-file-area">
+                        <div class="upload-prompt">
+                            <p><strong>Glissez-déposez votre fichier ici</strong></p>
+                            <p>ou cliquez pour sélectionner</p>
+                            <input type="file" id="base-file-input" accept=".xlsx,.xls" style="display: none;">
+                        </div>
+                        <div class="upload-hint">
+                            Formats acceptés : .xlsx, .xls<br>
+                            En-têtes attendus à la ligne 3
+                        </div>
+                    </div>
+                    <div id="base-file-info" class="file-info" style="display: none;">
+                        <h4>Fichier sélectionné</h4>
+                        <div id="base-file-details"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="upload-section">
+            <div class="card">
+                <div class="card-header">📊 Fichiers de Comparaison</div>
+                <div class="card-body">
+                    <div class="file-upload-area" id="comp-files-area">
+                        <div class="upload-prompt">
+                            <p><strong>Glissez-déposez vos fichiers ici</strong></p>
+                            <p>ou cliquez pour sélectionner</p>
+                            <input type="file" id="comp-files-input" accept=".xlsx,.xls" multiple style="display: none;">
+                        </div>
+                        <div class="upload-hint">
+                            Formats acceptés : .xlsx, .xls<br>
+                            En-têtes attendus à la ligne 8<br>
+                            Plusieurs fichiers autorisés
+                        </div>
+                    </div>
+                    <div id="comp-files-info" class="file-info" style="display: none;">
+                        <h4>Fichiers sélectionnés</h4>
+                        <div id="comp-files-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="comparison-config">
+        <div class="card">
+            <div class="card-header">⚙️ Configuration de la Comparaison</div>
+            <div class="card-body">
+                <div class="config-section">
+                    <label for="comparison-mode">Mode de comparaison :</label>
+                    <select id="comparison-mode">
+                        <option value="full">Comparaison complète</option>
+                        <option value="differences-only">Différences uniquement</option>
+                        <option value="summary">Résumé seulement</option>
+                    </select>
+                    <div class="help-text">
+                        Choisissez le niveau de détail pour l'analyse
+                    </div>
+                </div>
+                
+                <div class="config-section">
+                    <label>Correspondances des sites :</label>
+                    <div class="site-mapping">
+                        <div class="mapping-input">
+                            <input type="text" id="site-code" placeholder="Code site (ex: LE)">
+                            <select id="sheet-name">
+                                <option value="">Sélectionner une feuille...</option>
+                            </select>
+                            <button type="button" class="btn secondary-btn" id="add-mapping-btn">Ajouter</button>
+                        </div>
+                        <div class="mappings-display">
+                            <div id="mappings-list">
+                                <p class="no-mappings">Aucune correspondance définie</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="config-actions">
+                    <button class="btn primary-btn" id="start-comparison-btn" disabled>
+                        🚀 Démarrer la Comparaison
+                    </button>
+                    <button class="btn secondary-btn" id="reset-config-btn">
+                        🔄 Réinitialiser
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
