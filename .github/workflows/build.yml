@@ -81,7 +81,7 @@ jobs:
         New-Item -Path "dist_obf" -ItemType Directory -Force
         
         # Simple recursive obfuscation from entry point
-        pyarmor-7 obfuscate --recursive --output dist_obf src/backend/app.py
+        pyarmor obfuscate --recursive --output dist_obf src/backend/app.py
         
         # Copy non-Python assets
         if (Test-Path "src/frontend") {
