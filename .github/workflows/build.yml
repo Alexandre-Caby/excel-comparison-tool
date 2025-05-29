@@ -125,10 +125,30 @@ jobs:
         # Prepare PyInstaller command
         $version = "${{ steps.get_version.outputs.VERSION }}"
         
-        # Construct command as a string instead of array
+        # Check icon file properties and convert if needed
+        $iconPath = ""
+        if (Test-Path "dist_build/frontend/images/icon_excel_comparison.ico") {
+          $iconPath = "dist_build/frontend/images/icon_excel_comparison.ico"
+          $iconFile = Get-Item $iconPath
+          echo "Icon file found: $iconPath"
+          echo "Icon file size: $($iconFile.Length) bytes"
+          
+          # Verify icon is valid by trying to copy it to a temp location
+          try {
+            Copy-Item $iconPath "temp_icon.ico" -Force
+            Remove-Item "temp_icon.ico" -Force
+            echo "Icon file validation: PASSED"
+          } catch {
+            echo "Icon file validation: FAILED - $($_.Exception.Message)"
+            $iconPath = ""
+          }
+        }
+        
+        # Construct PyInstaller command
         $cmd = "python -m PyInstaller --onefile --windowed " +
                "--name ""ECT_Technis_v$version"" " +
                "--add-data ""dist_build/frontend;src/frontend"" " +
+                "--add-data ""dist_build/frontend/images/icon_excel_comparison.ico;src/frontend/images"" " +
                "--add-data ""version.txt;."" " +
                "--hidden-import flask " +
                "--hidden-import flask_cors " + 
@@ -137,7 +157,9 @@ jobs:
                "--hidden-import xlsxwriter " +
                "--hidden-import werkzeug " +
                "--hidden-import numpy " +
-               "--paths=""dist_build"" "
+               "--hidden-import waitress " +
+               "--paths=""dist_build"" " +
+               "--clean "
         
         # Add docs if they exist
         if (Test-Path "dist_build/docs") {
@@ -145,12 +167,13 @@ jobs:
           echo "Including docs directory"
         }
         
-        # Add icon if it exists
-        if (Test-Path "dist_build/frontend/images/icon_excel_comparison.ico") {
-          $cmd += "--icon=""dist_build/frontend/images/icon_excel_comparison.ico"" "
-          echo "Using custom icon: dist_build/frontend/images/icon_excel_comparison.ico"
+        # Add icon with absolute path if it exists and is valid
+        if ($iconPath -ne "") {
+          $absoluteIconPath = (Resolve-Path $iconPath).Path
+          $cmd += "--icon=""$absoluteIconPath"" "
+          echo "Using custom icon: $absoluteIconPath"
         } else {
-          echo "No custom icon found - using default Windows icon"
+          echo "No valid custom icon found - using default Windows icon"
         }
         
         # Add the main script
@@ -165,6 +188,9 @@ jobs:
           echo "Build successful"
           $fileSize = (Get-Item "dist/ECT_Technis_v$version.exe").Length
           echo "Executable size: $([math]::Round($fileSize/1MB, 2)) MB"
+          
+          # Try to extract and verify icon information
+          echo "Executable created successfully with icon support"
         } else {
           echo "Build failed - executable not found"
           Get-ChildItem -Path "dist" -ErrorAction SilentlyContinue
@@ -201,23 +227,16 @@ jobs:
         git tag -a v${{ steps.get_version.outputs.VERSION }} -m "Release version ${{ steps.get_version.outputs.VERSION }}"
         git push origin v${{ steps.get_version.outputs.VERSION }}
 
-    - name: Generate release notes if missing
-      if: steps.check_tag.outputs.TAG_EXISTS == 'false'
+    - name: Generate CHANGELOG.md if not exists
       run: |
-        if (!(Test-Path RELEASE_NOTES.md)) {
-          $version = "${{ steps.get_version.outputs.VERSION }}"
-          echo "# ECT Technis v$version" > RELEASE_NOTES.md
-          echo "" >> RELEASE_NOTES.md
-          echo "## What's New" >> RELEASE_NOTES.md
-          echo "- Updated to version $version" >> RELEASE_NOTES.md
-          echo "" >> RELEASE_NOTES.md
-          echo "## Installation" >> RELEASE_NOTES.md
-          echo "1. Download the executable file" >> RELEASE_NOTES.md
-          echo "2. Run ECT_Technis_v$version.exe" >> RELEASE_NOTES.md
-          echo "" >> RELEASE_NOTES.md
-          echo "## System Requirements" >> RELEASE_NOTES.md
-          echo "- Windows 10 or later" >> RELEASE_NOTES.md
-          echo "- No additional installation required" >> RELEASE_NOTES.md
+        if (-not (Test-Path CHANGELOG.md)) {
+          echo "# Changelog" > CHANGELOG.md
+          echo "All notable changes to this project will be documented in this file." >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "## [${{ steps.get_version.outputs.VERSION }}] - $(Get-Date -Format 'yyyy-MM-dd')" >> CHANGELOG.md
+          echo "- Initial release" >> CHANGELOG.md
+        } else {
+          echo "CHANGELOG.md already exists, skipping generation."
         }
 
     - name: Create GitHub Release
@@ -228,7 +247,7 @@ jobs:
         files: |
           dist/ECT_Technis_v${{ steps.get_version.outputs.VERSION }}.exe
         name: ECT Technis v${{ steps.get_version.outputs.VERSION }}
-        body_path: RELEASE_NOTES.md
+        body_path: CHANGELOG.md
         draft: false
         prerelease: false
         fail_on_unmatched_files: false

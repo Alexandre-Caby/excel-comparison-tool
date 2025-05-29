@@ -1,6 +1,6 @@
 {
   "name": "excel-comparison-tool",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "ECT Technis - Excel Comparison Tool",
   "main": "src/electron/main.js",
   "scripts": {

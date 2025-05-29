@@ -1,5 +1,10 @@
 # Excel Comparison Tool - Changelog
 
+## Version 1.0.2
+
+### New Features
+- Use of Waitress for production environment
+
 ## Version 1.0.1
 
 ### Bug Fixes

@@ -659,16 +659,26 @@ if __name__ == '__main__':
     print(f"Project root: {project_root}")
     print(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
     print(f"Frontend directory: {frontend_dir}")
-    print("Server starting on http://localhost:5000")
-    
-    # In frozen mode, automatically open browser
+
     if getattr(sys, 'frozen', False):
-        import webbrowser
-        import threading
-        def open_browser():
-            time.sleep(1.5)  # Give the server time to start
-            webbrowser.open('http://localhost:5000')
-        
-        threading.Thread(target=open_browser).start()
-    
-    app.run(debug=not getattr(sys, 'frozen', False), port=5000, host='localhost')
+        try:
+            from waitress import serve
+            import webbrowser
+            import threading
+            
+            def open_browser():
+                time.sleep(1.5)  # Give the server time to start
+                webbrowser.open('http://localhost:5000')
+            
+            threading.Thread(target=open_browser).start()
+            
+            print("Server starting in production mode on http://localhost:5000")
+            serve(app, host='localhost', port=5000)
+        except ImportError:
+            print("Waitress not available, falling back to Flask development server")
+            app.run(debug=False, port=5000, host='localhost')
+    else:
+        # Development mode
+        print("Server starting in development mode on http://localhost:5000")
+        print("You can test the frontend at: http://localhost:5000")
+        app.run(debug=True, port=5000, host='localhost')
