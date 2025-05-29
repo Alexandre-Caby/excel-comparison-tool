@@ -29,7 +29,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller
-        pip install pyarmor
+        pip install pyarmor==7.6.0
         pip install -r requirements.txt
     
     - name: Get version from file
@@ -81,7 +81,7 @@ jobs:
         New-Item -Path "dist_obf" -ItemType Directory -Force
         
         # Simple recursive obfuscation from entry point
-        pyarmor obfuscate --recursive --output dist_obf src/backend/app.py
+        pyarmor-7 obfuscate --recursive --output dist_obf src/backend/app.py
         
         # Copy non-Python assets
         if (Test-Path "src/frontend") {
@@ -103,6 +103,7 @@ jobs:
         } else {
           echo "Obfuscation failed - copying original files"
           Copy-Item -Path "src/*" -Destination "dist_obf/" -Recurse -Force
+          exit 1
         }
 
     - name: Build executable with PyInstaller

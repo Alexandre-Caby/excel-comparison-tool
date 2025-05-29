@@ -1,5 +1,11 @@
 # Excel Comparison Tool - Changelog
 
+## Version 1.0.1
+
+### Bug Fixes
+- Fixed issue with frozen imports in the main application
+- Resolved workflow errors
+
 ## Version 1.0.0
 
 ### New Features

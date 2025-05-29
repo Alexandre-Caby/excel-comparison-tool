@@ -11,54 +11,123 @@ import base64
 from datetime import datetime
 from werkzeug.utils import secure_filename
 
-# Add the project root to the Python path
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, project_root)
-
-# Import configuration and existing modules
-try:
-    from src.utils.config import config
-    from src.core.comparison_engine import ComparisonEngine
-    from src.core.excel_processor import ExcelProcessor
-    from src.core.site_matcher import SiteMatcher
-    from src.models.data_models import FileInfo, ComparisonSummary
-except ImportError:
-    # Fallback for direct execution from backend directory
-    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+# Handle frozen/executable vs development environment
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
     try:
-        from utils.config import config
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        # Development environment
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+# Determine if we're running as a frozen executable
+if getattr(sys, 'frozen', False):
+    # Running as executable
+    application_path = os.path.dirname(sys.executable)
+    project_root = sys._MEIPASS
+    frontend_dir = os.path.join(project_root, 'src', 'frontend')
+    
+    # Add the bundled src directory to Python path
+    sys.path.insert(0, os.path.join(project_root, 'src'))
+    
+else:
+    # Running in development
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    application_path = project_root
+    frontend_dir = os.path.join(project_root, 'src', 'frontend')
+    
+    # Add the project root to the Python path
+    sys.path.insert(0, project_root)
+
+# Import configuration and existing modules with fallback handling
+try:
+    if getattr(sys, 'frozen', False):
+        # Frozen executable - use simpler imports
         from core.comparison_engine import ComparisonEngine
         from core.excel_processor import ExcelProcessor
         from core.site_matcher import SiteMatcher
         from models.data_models import FileInfo, ComparisonSummary
-    except ImportError as e:
-        print(f"Import error: {e}")
-        print("Please ensure you're running from the project root or the imports are correct")
-        # Use basic fallback configuration
-        class SimpleConfig:
-            def get(self, key, default=None):
-                defaults = {
-                    'temp_dir': 'temp',
-                    'max_file_size_mb': 200,
-                    'app_name': 'Excel Comparison Tool',
-                    'version': '1.0.0',
-                    'logging.level': 'INFO',
-                    'logging.format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    'logging.file': 'app.log'
-                }
-                return defaults.get(key, default)
-        config = SimpleConfig()
+        from utils.config import config
+    else:
+        # Development environment
+        from src.utils.config import config
+        from src.core.comparison_engine import ComparisonEngine
+        from src.core.excel_processor import ExcelProcessor
+        from src.core.site_matcher import SiteMatcher
+        from src.models.data_models import FileInfo, ComparisonSummary
+        
+except ImportError as e:
+    print(f"Import error: {e}")
+    print(f"Frozen state: {getattr(sys, 'frozen', False)}")
+    print(f"Project root: {project_root}")
+    print(f"Python path: {sys.path}")
+    
+    # Fallback for missing modules - create basic implementations
+    class SimpleConfig:
+        def get(self, key, default=None):
+            defaults = {
+                'temp_dir': 'temp',
+                'max_file_size_mb': 200,
+                'app_name': 'Excel Comparison Tool',
+                'version': '1.0.0',
+                'logging.level': 'INFO',
+                'logging.format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                'logging.file': 'app.log'
+            }
+            return defaults.get(key, default)
+    
+    config = SimpleConfig()
+    
+    # Create placeholder classes if modules are missing
+    class ComparisonEngine:
+        def find_differences(self, *args, **kwargs):
+            return pd.DataFrame()
+        def find_duplicates(self, *args, **kwargs):
+            return pd.DataFrame()
+    
+    class ExcelProcessor:
+        def __init__(self, filepath):
+            self.filepath = filepath
+            self.sheet_names = []
+        def load_workbook(self):
+            return False
+        def get_sheet_data(self, *args, **kwargs):
+            return pd.DataFrame()
+        def get_sheet_preview(self, *args, **kwargs):
+            return pd.DataFrame()
+    
+    class SiteMatcher:
+        def set_site_mappings(self, mappings):
+            pass
+    
+    class FileInfo:
+        def __init__(self, file_path, file_name, sheet_names):
+            self.file_path = file_path
+            self.file_name = file_name
+            self.sheet_names = sheet_names
+        
+        @classmethod
+        def from_path(cls, filepath, sheet_names):
+            return cls(filepath, os.path.basename(filepath), sheet_names)
 
 app = Flask(__name__)
 CORS(app)
 
-# Configuration - Use absolute paths
-backend_dir = os.path.dirname(os.path.abspath(__file__))
-app.config['UPLOAD_FOLDER'] = os.path.join(backend_dir, 'temp')
+# Configuration - Use paths appropriate for frozen/development
+if getattr(sys, 'frozen', False):
+    # Frozen executable - use temp directory relative to executable
+    temp_dir = os.path.join(os.path.dirname(sys.executable), 'temp')
+else:
+    # Development - use backend temp directory
+    temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp')
+
+app.config['UPLOAD_FOLDER'] = temp_dir
 app.config['MAX_CONTENT_LENGTH'] = config.get('max_file_size_mb', 200) * 1024 * 1024
 
 # Frontend directory for serving static files during development
-frontend_dir = os.path.join(project_root, 'src', 'frontend')
+# frontend_dir = os.path.join(project_root, 'src', 'frontend')
 
 # Ensure temp directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -536,23 +605,42 @@ def generate_excel_report(report_data):
     output.seek(0)
     return output
 
-# Serve documentation files
+# Serve documentation files with frozen-aware paths
 @app.route('/docs/<path:filename>')
 def serve_docs(filename):
-    docs_dir = os.path.join(project_root, 'docs')
-    return send_from_directory(docs_dir, filename)
+    if getattr(sys, 'frozen', False):
+        docs_dir = os.path.join(project_root, 'docs')
+    else:
+        docs_dir = os.path.join(project_root, 'docs')
+    
+    try:
+        return send_from_directory(docs_dir, filename)
+    except FileNotFoundError:
+        return jsonify({'error': 'Documentation file not found'}), 404
 
 @app.route('/docs/legal/<path:filename>')
 def serve_legal_docs(filename):
-    legal_docs_dir = os.path.join(project_root, 'docs', 'legal')
-    return send_from_directory(legal_docs_dir, filename)
+    if getattr(sys, 'frozen', False):
+        legal_docs_dir = os.path.join(project_root, 'docs', 'legal')
+    else:
+        legal_docs_dir = os.path.join(project_root, 'docs', 'legal')
+    
+    try:
+        return send_from_directory(legal_docs_dir, filename)
+    except FileNotFoundError:
+        return jsonify({'error': 'Legal document not found'}), 404
 
 if __name__ == '__main__':
-    # Set up logging
+    # Set up logging with frozen-aware paths
     import logging
     
     # Create logs directory if it doesn't exist
-    log_dir = os.path.dirname(config.get('logging.file', 'app.log'))
+    if getattr(sys, 'frozen', False):
+        log_file = os.path.join(os.path.dirname(sys.executable), 'app.log')
+    else:
+        log_file = config.get('logging.file', 'app.log')
+    
+    log_dir = os.path.dirname(log_file)
     if log_dir and not os.path.exists(log_dir):
         os.makedirs(log_dir, exist_ok=True)
     
@@ -560,16 +648,27 @@ if __name__ == '__main__':
         level=getattr(logging, config.get('logging.level', 'INFO')),
         format=config.get('logging.format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s'),
         handlers=[
-            logging.FileHandler(config.get('logging.file', 'app.log')),
+            logging.FileHandler(log_file),
             logging.StreamHandler()
         ]
     )
     
     print(f"Starting {config.get('app_name', 'Excel Comparison Tool')} v{config.get('version', '1.0.0')}")
+    print(f"Frozen state: {getattr(sys, 'frozen', False)}")
+    print(f"Application path: {application_path}")
     print(f"Project root: {project_root}")
     print(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
     print(f"Frontend directory: {frontend_dir}")
     print("Server starting on http://localhost:5000")
-    print("You can test the frontend at: http://localhost:5000")
     
-    app.run(debug=True, port=5000, host='localhost')
+    # In frozen mode, automatically open browser
+    if getattr(sys, 'frozen', False):
+        import webbrowser
+        import threading
+        def open_browser():
+            time.sleep(1.5)  # Give the server time to start
+            webbrowser.open('http://localhost:5000')
+        
+        threading.Thread(target=open_browser).start()
+    
+    app.run(debug=not getattr(sys, 'frozen', False), port=5000, host='localhost')
