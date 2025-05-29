@@ -83,18 +83,27 @@ jobs:
         # Simple recursive obfuscation from entry point
         pyarmor obfuscate --recursive --output dist_obf src/backend/app.py
         
-        # Copy non-Python assets
+        # Create proper directory structure for frontend files
+        New-Item -Path "dist_obf/src" -ItemType Directory -Force -ErrorAction SilentlyContinue
+        
+        # Copy non-Python assets with proper structure
         if (Test-Path "src/frontend") {
-          Copy-Item -Path "src/frontend" -Destination "dist_obf/" -Recurse -Force
+          Copy-Item -Path "src/frontend" -Destination "dist_obf/src/" -Recurse -Force
+          echo "Frontend files copied to dist_obf/src/frontend"
+          Get-ChildItem -Path "dist_obf/src/frontend" -Recurse | Select-Object FullName
+        } else {
+          echo "WARNING: Frontend directory not found at src/frontend"
         }
+        
+        # Copy docs directory if it exists
+        if (Test-Path "docs") {
+          Copy-Item -Path "docs" -Destination "dist_obf/" -Recurse -Force
+          echo "Docs copied to dist_obf/docs"
+        }
+        
+        # Copy other assets if needed
         if (Test-Path "static") {
           Copy-Item -Path "static" -Destination "dist_obf/" -Recurse -Force
-        }
-        if (Test-Path "templates") {
-          Copy-Item -Path "templates" -Destination "dist_obf/" -Recurse -Force
-        }
-        if (Test-Path "assets") {
-          Copy-Item -Path "assets" -Destination "dist_obf/" -Recurse -Force
         }
         
         # Verify obfuscation worked
@@ -105,23 +114,35 @@ jobs:
           Copy-Item -Path "src/*" -Destination "dist_obf/" -Recurse -Force
           exit 1
         }
+        
+        # List final directory structure for verification
+        echo "Final dist_obf structure:"
+        Get-ChildItem -Path "dist_obf" -Recurse | Select-Object FullName
 
     - name: Build executable with PyInstaller
       run: |
+        # Verify frontend directory exists before building
+        if (Test-Path "dist_obf/src/frontend") {
+          echo "Frontend directory found at dist_obf/src/frontend"
+        } else {
+          echo "ERROR: Frontend directory not found at expected location"
+          Get-ChildItem -Path "dist_obf" -Recurse
+          exit 1
+        }
         
         # Build with PyInstaller - only add essential data files
         $version = "${{ steps.get_version.outputs.VERSION }}"
         python -m PyInstaller --onefile --windowed `
           --name "ECT_Technis_v$version" `
           --add-data "dist_obf/src/frontend;src/frontend" `
-          --add-data "docs;docs" `
+          --add-data "dist_obf/docs;docs" `
           --add-data "version.txt;." `
           --hidden-import "flask" `
+          --hidden-import "flask_cors" `
           --hidden-import "pandas" `
           --hidden-import "openpyxl" `
           --hidden-import "xlsxwriter" `
           --hidden-import "werkzeug" `
-          --hidden-import "flask_cors" `
           --hidden-import "numpy" `
           --paths="dist_obf" `
           dist_obf/app.py
