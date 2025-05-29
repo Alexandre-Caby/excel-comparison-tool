@@ -29,12 +29,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller
-        pip install 2to3
-        # Install pyminifier
-        pip install pyminifier
-
-        # Verify installation
-        python -c "import pyminifier" || (echo 'Failed to install pyminifier' && exit 1)
         pip install -r requirements.txt
     
     - name: Get version from file
@@ -76,115 +70,105 @@ jobs:
           exit 1
         }
         
+        # Check for icon file C:\Users\alexa\Desktop\Projets\excel-comparison-tool\src\frontend\images\icon_excel_comparison.ico
+        if (Test-Path "src/frontend/images/icon_excel_comparison.ico") {
+          echo "Icon file found: src/frontend/images/icon_excel_comparison.ico"
+        } else {
+          echo "WARNING: No icon file found in src/frontend/images"
+        }
+        
         # List project structure for debugging
         echo "Project structure:"
-        Get-ChildItem -Path . -Recurse | Where-Object { $_.Name -match '\.(py|txt|md)$' } | Select-Object FullName
+        Get-ChildItem -Path . -Recurse | Where-Object { $_.Name -match '\.(py|txt|md|ico)$' } | Select-Object FullName
 
-    - name: Secure code with basic obfuscation
+    - name: Prepare build directory (without obfuscation)
       run: |
-        # Create build directory structure
-        New-Item -Path "secure_build" -ItemType Directory -Force
-        New-Item -Path "secure_build/src" -ItemType Directory -Force
-        New-Item -Path "secure_build/src/backend" -ItemType Directory -Force
-        New-Item -Path "secure_build/src/core" -ItemType Directory -Force
-        New-Item -Path "secure_build/src/models" -ItemType Directory -Force
-        New-Item -Path "secure_build/src/utils" -ItemType Directory -Force
+        # Create output directory
+        New-Item -Path "dist_build" -ItemType Directory -Force
         
-        # Install Python code transformation tools
-        pip install pyminifier
+        # Copy all source files without obfuscation
+        Copy-Item -Path "src/*" -Destination "dist_build/" -Recurse -Force
         
-        # Apply basic code obfuscation to Python files
-        Get-ChildItem -Path "src" -Filter "*.py" -Recurse | ForEach-Object {
-          $relativePath = $_.FullName.Substring((Get-Location).Path.Length + 1)
-          $outputPath = Join-Path "secure_build" $relativePath
-          $outputDir = Split-Path -Path $outputPath -Parent
-          
-          # Ensure output directory exists
-          if (-not (Test-Path $outputDir)) {
-            New-Item -Path $outputDir -ItemType Directory -Force | Out-Null
-          }
-          
-          # Apply obfuscation using pyminifier
-          Write-Host "Securing: $relativePath"
-          python -m pyminifier --obfuscate-variables --obfuscate-functions --replacement-length=3 $_.FullName | Out-File -FilePath $outputPath -Encoding utf8
-        }
-        
-        # Copy non-Python files (keeping directory structure)
-        Get-ChildItem -Path "src" -Recurse | Where-Object { -not $_.PSIsContainer -and $_.Extension -ne ".py" } | ForEach-Object {
-          $relativePath = $_.FullName.Substring((Get-Location).Path.Length + 1)
-          $outputPath = Join-Path "secure_build" $relativePath
-          $outputDir = Split-Path -Path $outputPath -Parent
-          
-          # Ensure output directory exists
-          if (-not (Test-Path $outputDir)) {
-            New-Item -Path $outputDir -ItemType Directory -Force | Out-Null
-          }
-          
-          # Copy the file
-          Copy-Item -Path $_.FullName -Destination $outputPath -Force
-        }
-        
-        # Copy frontend files
-        if (Test-Path "src/frontend") {
-          Copy-Item -Path "src/frontend" -Destination "secure_build/src/" -Recurse -Force
-          echo "Frontend files copied to secure_build/src/frontend"
-        }
-        
-        # Copy docs directory if it exists
+        # Copy other assets if needed
         if (Test-Path "docs") {
-          Copy-Item -Path "docs" -Destination "secure_build/" -Recurse -Force
-          echo "Docs copied to secure_build/docs"
+          Copy-Item -Path "docs" -Destination "dist_build/" -Recurse -Force
+          echo "Docs copied to dist_build/docs"
         }
         
-        # Verify build was successful
-        if (Test-Path "secure_build/src/backend/app.py") {
-          echo "Code transformation successful"
-        } else {
-          echo "Code transformation failed"
-          exit 1
+        if (Test-Path "static") {
+          Copy-Item -Path "static" -Destination "dist_build/" -Recurse -Force
         }
+        
+        # Copy icon file if it exists
+        if (Test-Path "src/frontend/images/icon_excel_comparison.ico") {
+          Copy-Item -Path "src/frontend/images/icon_excel_comparison.ico" -Destination "dist_build/frontend/images/" -Force
+          echo "Icon copied to dist_build/frontend/images/"
+        } else {
+          echo "No icon file found to copy"
+        }
+        
+        # List final directory structure for verification
+        echo "Final dist_build structure:"
+        Get-ChildItem -Path "dist_build" -Recurse | Select-Object FullName
 
     - name: Build executable with PyInstaller
       run: |
-        # Find icon file
-        $iconParam = ""
-        if (Test-Path "src/frontend/images/icon_excel_comparison.ico") {
-          $iconParam = "--icon=src/frontend/images/icon_excel_comparison.ico"
-          echo "Using icon from: src/frontend/images/icon_excel_comparison.ico"
+        # Verify frontend directory exists before building
+        if (Test-Path "dist_build/frontend") {
+          echo "Frontend directory found at dist_build/frontend"
         } else {
-          echo "No icon file found"
+          echo "ERROR: Frontend directory not found at expected location"
+          Get-ChildItem -Path "dist_build" -Recurse
+          exit 1
         }
         
-        # Build with PyInstaller (with --key for additional security)
+        # Prepare PyInstaller command
         $version = "${{ steps.get_version.outputs.VERSION }}"
-        $randomKey = [System.Guid]::NewGuid().ToString().Substring(0, 16)
+        $pyinstallerCmd = @(
+          "python", "-m", "PyInstaller", "--onefile", "--windowed",
+          "--name", "ECT_Technis_v$version",
+          "--add-data", "dist_build/frontend;src/frontend",
+          "--add-data", "version.txt;.",
+          "--hidden-import", "flask",
+          "--hidden-import", "flask_cors", 
+          "--hidden-import", "pandas",
+          "--hidden-import", "openpyxl",
+          "--hidden-import", "xlsxwriter",
+          "--hidden-import", "werkzeug",
+          "--hidden-import", "numpy",
+          "--paths=dist_build"
+        )
         
-        python -m PyInstaller --onefile --windowed $iconParam `
-          --key=$randomKey `
-          --name "ECT_Technis_v$version" `
-          --add-data "secure_build/src/frontend;src/frontend" `
-          --add-data "secure_build/docs;docs" `
-          --add-data "version.txt;." `
-          --hidden-import "flask" `
-          --hidden-import "flask_cors" `
-          --hidden-import "pandas" `
-          --hidden-import "openpyxl" `
-          --hidden-import "xlsxwriter" `
-          --hidden-import "werkzeug" `
-          --hidden-import "numpy" `
-          --paths="secure_build" `
-          --clean `
-          secure_build/src/backend/app.py
+        # Add docs if they exist
+        if (Test-Path "dist_build/docs") {
+          $pyinstallerCmd += "--add-data", "dist_build/docs;docs"
+        }
+        
+        # Add icon if it exists
+        if (Test-Path "dist_build/frontend/images/icon_excel_comparison.ico") {
+          $pyinstallerCmd += "--icon", "dist_build/frontend/images/icon_excel_comparison.ico"
+          echo "Using custom icon: dist_build/frontend/images/icon_excel_comparison.ico"
+        } else {
+          echo "No custom icon found - using default Windows icon"
+        }
+        
+        # Add the main script
+        $pyinstallerCmd += "dist_build/backend/app.py"
+        
+        # Execute PyInstaller
+        & $pyinstallerCmd
         
         # Verify the build
         if (Test-Path "dist/ECT_Technis_v$version.exe") {
           echo "Build successful"
+          $fileSize = (Get-Item "dist/ECT_Technis_v$version.exe").Length
+          echo "Executable size: $([math]::Round($fileSize/1MB, 2)) MB"
         } else {
           echo "Build failed - executable not found"
           Get-ChildItem -Path "dist" -ErrorAction SilentlyContinue
           exit 1
         }
-        
+
     - name: Test executable
       run: |
         $version = "${{ steps.get_version.outputs.VERSION }}"
@@ -255,7 +239,7 @@ jobs:
       with:
         name: debug-artifacts-${{ steps.get_version.outputs.VERSION }}
         path: |
-          dist_obf/
+          dist_build/
           build/
           *.spec
           *.log
