@@ -29,7 +29,12 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller
-        pip install pyarmor==7.6.0
+        pip install 2to3
+        # Install pyminifier
+        pip install pyminifier
+
+        # Verify installation
+        python -c "import pyminifier" || (echo 'Failed to install pyminifier' && exit 1)
         pip install -r requirements.txt
     
     - name: Get version from file
