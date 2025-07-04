@@ -1,14 +1,55 @@
-// Not used but maybe later if development in desktop app
-
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const axios = require('axios');
+const fs = require('fs');
 
 let mainWindow;
 let pythonProcess;
 
+// Enhanced logging that works in packaged apps
+function setupEnhancedLogging() {
+  const logDir = path.join(app.getPath('userData'), 'logs');
+  
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+  }
+  
+  const logFile = path.join(logDir, `app-${new Date().toISOString().replace(/[:.]/g, '-')}.log`);
+  const logStream = fs.createWriteStream(logFile, { flags: 'a' });
+  
+  const originalLog = console.log;
+  const originalError = console.error;
+  
+  console.log = function(...args) {
+    const message = `[${new Date().toISOString()}] [LOG] ${args.join(' ')}`;
+    logStream.write(message + '\n');
+    originalLog.apply(console, args);
+  };
+  
+  console.error = function(...args) {
+    const message = `[${new Date().toISOString()}] [ERROR] ${args.join(' ')}`;
+    logStream.write(message + '\n');
+    originalError.apply(console, args);
+  };
+  
+  console.log('=== ECT TECHNIS STARTUP ===');
+  console.log('Log file:', logFile);
+  console.log('App version:', app.getVersion());
+  console.log('Electron version:', process.versions.electron);
+  console.log('Node version:', process.versions.node);
+  console.log('Platform:', process.platform, process.arch);
+  console.log('Is packaged:', app.isPackaged);
+  console.log('App path:', app.getAppPath());
+  console.log('Resources path:', process.resourcesPath);
+  console.log('User data:', app.getPath('userData'));
+  
+  return logFile;
+}
+
 function createWindow() {
+  const logFile = setupEnhancedLogging();
+  
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -27,91 +68,142 @@ function createWindow() {
     minHeight: 800
   });
 
+  // Show debug info immediately
+  mainWindow.webContents.once('dom-ready', () => {
+    console.log('DOM ready - injecting debug info');
+    mainWindow.webContents.executeJavaScript(`
+      document.body.style.backgroundColor = '#f0f0f0';
+      document.body.innerHTML = '<div style="padding: 20px; font-family: monospace;"><h2>ECT Technis Debug Info</h2><pre id="debug-info">Loading...</pre></div>';
+      document.getElementById('debug-info').textContent = 'Log file: ${logFile.replace(/\\/g, '\\\\')}\\nWaiting for Python backend...';
+    `);
+  });
+
   // Start Python backend
   startPythonServer();
 
-  // Wait for backend to be ready, then load frontend
-  waitForBackend().then(() => {
-    // Load the app via localhost URL
-    mainWindow.loadURL('http://localhost:5000');
-    mainWindow.show();
-    
-    // Open DevTools in development
-    if (process.env.NODE_ENV === 'development') {
-      mainWindow.webContents.openDevTools();
-    }
-  }).catch((error) => {
-    console.error('Failed to start backend:', error);
-    
-    // Fallback: try to load local files
-    console.log('Attempting fallback to local files...');
-    mainWindow.loadFile(path.join(__dirname, '../frontend/index.html'));
-    mainWindow.show();
+  // Load a basic page first
+  mainWindow.loadFile(path.join(__dirname, '../frontend/index.html')).catch(() => {
+    console.error('Failed to load local file, creating fallback page');
+    mainWindow.loadURL('data:text/html,<html><body><h1>ECT Technis Debug Mode</h1><p>Check logs for details</p></body></html>');
   });
+  
+  mainWindow.show();
+
+  // Try to connect to backend after a delay
+  setTimeout(() => {
+    waitForBackend().then((port) => {
+      console.log(`Backend ready on port ${port}, reloading UI`);
+      mainWindow.loadURL(`http://localhost:${port}`);
+    }).catch((error) => {
+      console.error('Backend failed to start:', error);
+      mainWindow.webContents.executeJavaScript(`
+        document.body.innerHTML = '<div style="padding: 20px; color: red;"><h2>Backend Error</h2><pre>${error.message}</pre><p>Check logs at: ${logFile.replace(/\\/g, '\\\\')}</p></div>';
+      `);
+    });
+  }, 2000);
 
   mainWindow.on('closed', () => {
     mainWindow = null;
     if (pythonProcess) {
-      console.log('Killing Python process...');
+      console.log('Terminating Python process...');
       pythonProcess.kill('SIGTERM');
-      
-      // Force kill after 5 seconds if still running
-      setTimeout(() => {
-        if (pythonProcess && !pythonProcess.killed) {
-          pythonProcess.kill('SIGKILL');
-        }
-      }, 5000);
     }
-  });
-
-  // Handle external links
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    require('electron').shell.openExternal(url);
-    return { action: 'deny' };
   });
 }
 
 function startPythonServer() {
+  console.log('=== STARTING PYTHON SERVER ===');
+  
   let pythonScript;
-  let pythonExecutable;
+  let pythonExecutable = 'python';
+  let workingDir;
   
   if (app.isPackaged) {
-    // In production: use resources path
+    console.log('Running in packaged mode');
     const resourcesPath = process.resourcesPath;
-    pythonScript = path.join(resourcesPath, 'app', 'secure_src', 'backend', 'app.py');
     
-    // Use bundled Python if possible (use pythonw.exe to hide console window)
-    pythonExecutable = path.join(resourcesPath, 'python', 'pythonw.exe');
-    if (!require('fs').existsSync(pythonExecutable)) {
-      // Fallback to system Python
-      pythonExecutable = 'pythonw';
+    // List contents of resources directory
+    console.log('Resources directory contents:');
+    try {
+      const resourceFiles = fs.readdirSync(resourcesPath);
+      resourceFiles.forEach(file => {
+        const fullPath = path.join(resourcesPath, file);
+        const stats = fs.statSync(fullPath);
+        console.log(`  ${stats.isDirectory() ? 'DIR' : 'FILE'}: ${file}`);
+      });
+    } catch (err) {
+      console.error('Error listing resources:', err);
+    }
+    
+    // Check possible Python script locations
+    const possiblePaths = [
+      path.join(resourcesPath, 'app', 'secure_src', 'backend', 'app.py'),
+      path.join(resourcesPath, 'secure_src', 'backend', 'app.py'),
+      path.join(resourcesPath, 'app', 'backend', 'app.py'),
+      path.join(resourcesPath, 'backend', 'app.py')
+    ];
+    
+    console.log('Checking for Python script in possible locations:');
+    for (const testPath of possiblePaths) {
+      const exists = fs.existsSync(testPath);
+      console.log(`  ${exists ? '✓' : '✗'} ${testPath}`);
+      if (exists && !pythonScript) {
+        pythonScript = testPath;
+        workingDir = path.dirname(testPath);
+      }
+    }
+    
+    // Check for bundled Python
+    const possiblePythonPaths = [
+      path.join(resourcesPath, 'python', 'python.exe'),
+      path.join(resourcesPath, 'python', 'pythonw.exe')
+    ];
+    
+    console.log('Checking for bundled Python:');
+    for (const testPath of possiblePythonPaths) {
+      const exists = fs.existsSync(testPath);
+      console.log(`  ${exists ? '✓' : '✗'} ${testPath}`);
+      if (exists) {
+        pythonExecutable = testPath;
+        break;
+      }
     }
   } else {
-    // In development
+    console.log('Running in development mode');
     pythonScript = path.join(__dirname, '../backend/app.py');
-    pythonExecutable = 'python';
+    workingDir = path.dirname(pythonScript);
   }
   
-  console.log('Starting Python server...');
-  console.log('Python script path:', pythonScript);
-  console.log('Python executable:', pythonExecutable);
+  if (!pythonScript) {
+    console.error('CRITICAL: Python script not found!');
+    return;
+  }
   
-
+  if (!fs.existsSync(pythonScript)) {
+    console.error(`CRITICAL: Python script does not exist at: ${pythonScript}`);
+    return;
+  }
+  
+  console.log(`Python executable: ${pythonExecutable}`);
+  console.log(`Python script: ${pythonScript}`);
+  console.log(`Working directory: ${workingDir}`);
+  
   try {
+    console.log('Spawning Python process...');
     pythonProcess = spawn(pythonExecutable, [pythonScript], {
-      cwd: path.dirname(pythonScript),
+      cwd: workingDir,
       env: { ...process.env, PYTHONUNBUFFERED: '1' },
-      windowsHide: true
+      windowsHide: false // Show console for debugging
     });
 
     console.log(`Python PID: ${pythonProcess.pid}`);
     
     pythonProcess.stdout.on('data', (data) => {
-      console.log(`Python stdout: ${data.toString()}`);
+      console.log(`Python stdout: ${data.toString().trim()}`);
     });
     
     pythonProcess.stderr.on('data', (data) => {
-      console.error(`Python stderr: ${data.toString()}`);
+      console.error(`Python stderr: ${data.toString().trim()}`);
     });
     
     pythonProcess.on('close', (code) => {
@@ -119,39 +211,37 @@ function startPythonServer() {
     });
     
     pythonProcess.on('error', (error) => {
-      console.error('Failed to start Python process:', error);
-      dialog.showErrorBox(
-        'Backend Error',
-        `Failed to start Python backend: ${error.message}\n\nPlease make sure Python is installed.`
-      );
+      console.error('Python process error:', error);
     });
   } catch (error) {
     console.error('Exception starting Python process:', error);
   }
 }
 
-async function waitForBackend(maxAttempts = 30) {
-  let attempts = 0;
+async function waitForBackend(maxAttempts = 30, ports = [5000, 5001, 5002, 5003]) {
+  console.log('Waiting for backend to become available...');
   
-  console.log('Waiting for backend to be ready...');
-  
-  while (attempts < maxAttempts) {
-    try {
-      const response = await axios.get('http://localhost:5000/health', { 
-        timeout: 5000 
-      });
-      console.log('Backend is ready!');
-      return;
-    } catch (error) {
-      attempts++;
-      console.log(`Waiting for backend... attempt ${attempts}/${maxAttempts}`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+  for (const port of ports) {
+    console.log(`Trying port ${port}...`);
+    let attempts = 0;
+    
+    while (attempts < maxAttempts) {
+      try {
+        const response = await axios.get(`http://localhost:${port}/health`, { timeout: 2000 });
+        console.log(`Backend is ready on port ${port}!`);
+        return port;
+      } catch (error) {
+        attempts++;
+        console.log(`Port ${port} attempt ${attempts}/${maxAttempts}: ${error.message}`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
   }
-  throw new Error('Backend failed to start after maximum attempts');
+  
+  throw new Error('Backend failed to start on any port');
 }
 
-// IPC handlers for file dialogs
+// IPC handlers
 ipcMain.handle('select-files', async (event, options) => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile', 'multiSelections'],
@@ -165,9 +255,7 @@ ipcMain.handle('select-files', async (event, options) => {
 });
 
 // App event handlers
-app.whenReady().then(() => {
-  createWindow();
-});
+app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
   if (pythonProcess) {
@@ -184,7 +272,6 @@ app.on('activate', () => {
   }
 });
 
-// Handle app quit
 app.on('before-quit', () => {
   if (pythonProcess) {
     pythonProcess.kill('SIGTERM');
