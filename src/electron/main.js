@@ -190,7 +190,15 @@ function startPythonServer() {
   
   try {
     console.log('Spawning Python process...');
-    pythonProcess = spawn(pythonExecutable, [pythonScript], {
+    
+    // Use run_app.py instead of app.py directly
+    const runAppScript = path.join(workingDir, 'run_app.py');
+    if (!fs.existsSync(runAppScript)) {
+      console.log('Creating bootstrap file...');
+      const bootstrapCode = `import os, sys\nproject_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))\nsys.path.insert(0, project_root)\nimport app\nif __name__ == "__main__":\n    app.app.run(debug=False, port=5000, host='localhost')`;
+      fs.writeFileSync(runAppScript, bootstrapCode);
+    }
+    pythonProcess = spawn(pythonExecutable, [runAppScript], {
       cwd: workingDir,
       env: { ...process.env, PYTHONUNBUFFERED: '1' },
       windowsHide: false // Show console for debugging
