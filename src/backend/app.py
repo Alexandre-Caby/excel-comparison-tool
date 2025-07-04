@@ -373,7 +373,7 @@ def export_report():
 def serve_docs(filename):
     """Serve documentation files from docs directory"""
     if app.isPackaged:
-        docs_dir = os.path.join(project_root, 'app', 'docs')
+        docs_dir = os.path.join(project_root, 'docs')
     else:
         docs_dir = os.path.join(project_root, 'docs')
     
@@ -395,7 +395,7 @@ def serve_docs(filename):
 def serve_legal_docs(filename):
     """Serve legal documentation files"""
     if app.isPackaged:
-        legal_docs_dir = os.path.join(project_root, 'app', 'docs', 'legal')
+        legal_docs_dir = os.path.join(project_root, 'docs', 'legal')
     else:
         legal_docs_dir = os.path.join(project_root, 'docs', 'legal')
     
@@ -450,7 +450,6 @@ def is_packaged_app():
     app_path = os.path.abspath(__file__)
     return 'Temp' in app_path and 'resources' in app_path
 
-# Add this near the app configuration
 app.isPackaged = is_packaged_app()
 
 if __name__ == '__main__':
