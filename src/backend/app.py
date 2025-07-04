@@ -53,6 +53,13 @@ session_data = {
     'site_mappings': {"LE": "Lens", "BGL": "BGL"}
 }
 
+def is_packaged_app():
+    """Detect if running in packaged mode"""
+    app_path = os.path.abspath(__file__)
+    return 'Temp' in app_path and 'resources' in app_path
+
+app.isPackaged = is_packaged_app()
+
 # Serve frontend files
 @app.route('/')
 def serve_frontend():
@@ -364,18 +371,46 @@ def export_report():
 # Serve documentation files
 @app.route('/docs/<path:filename>')
 def serve_docs(filename):
-    docs_dir = os.path.join(project_root, 'docs')
+    """Serve documentation files from docs directory"""
+    if app.isPackaged:
+        docs_dir = os.path.join(project_root, 'app', 'docs')
+    else:
+        docs_dir = os.path.join(project_root, 'docs')
+    
+    print(f"Looking for docs in: {docs_dir}")
+    print(f"Requested file: {filename}")
+    
+    # Check if docs directory exists
+    if not os.path.exists(docs_dir):
+        print(f"Docs directory not found: {docs_dir}")
+        return jsonify({'error': 'Documentation directory not found'}), 404
+    
     try:
         return send_from_directory(docs_dir, filename)
     except FileNotFoundError:
+        print(f"Documentation file not found: {filename}")
         return jsonify({'error': 'Documentation file not found'}), 404
 
 @app.route('/docs/legal/<path:filename>')
 def serve_legal_docs(filename):
-    legal_docs_dir = os.path.join(project_root, 'docs', 'legal')
+    """Serve legal documentation files"""
+    if app.isPackaged:
+        legal_docs_dir = os.path.join(project_root, 'app', 'docs', 'legal')
+    else:
+        legal_docs_dir = os.path.join(project_root, 'docs', 'legal')
+    
+    print(f"Looking for legal docs in: {legal_docs_dir}")
+    print(f"Requested legal file: {filename}")
+    
+    # Check if legal docs directory exists
+    if not os.path.exists(legal_docs_dir):
+        print(f"Legal docs directory not found: {legal_docs_dir}")
+        return jsonify({'error': 'Legal documentation directory not found'}), 404
+    
     try:
         return send_from_directory(legal_docs_dir, filename)
     except FileNotFoundError:
+        print(f"Legal documentation file not found: {filename}")
         return jsonify({'error': 'Legal document not found'}), 404
 
 @app.route('/shutdown', methods=['POST'])
@@ -408,8 +443,25 @@ def cleanup_and_shutdown():
         func()
     else:
         os._exit(0)
+        
+def is_packaged_app():
+    """Detect if running in packaged mode"""
+    # Check if we're running from a temp directory (typical for Electron apps)
+    app_path = os.path.abspath(__file__)
+    return 'Temp' in app_path and 'resources' in app_path
+
+# Add this near the app configuration
+app.isPackaged = is_packaged_app()
 
 if __name__ == '__main__':
+    # Detect if running in packaged mode
+    is_packaged = getattr(sys, 'frozen', False) or hasattr(sys, '_MEIPASS')
+    
+    # Override if we detect we're in an Electron packaged app
+    if not is_packaged:
+        app_path = os.path.abspath(__file__)
+        is_packaged = 'Temp' in app_path and 'resources' in app_path
+    
     # Set up logging
     log_file = config.get('logging.file', 'app.log')
     log_dir = os.path.dirname(log_file)
@@ -425,10 +477,17 @@ if __name__ == '__main__':
         ]
     )
     
-    print(f"Starting {config.get('app_name', 'Excel Comparison Tool')} v{config.get('version', '1.1.0')}")
+    app_name = config.get('app_name', 'Excel Comparison Tool')
+    version = config.get('version', '1.1.0')
+    
+    print(f"Starting {app_name} v{version}")
     print(f"Application path: {project_root}")
     print(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
     print(f"Frontend directory: {frontend_dir}")
-    print("Server starting in development mode on http://localhost:5000")
     
-    app.run(debug=True, port=5000, host='localhost')
+    if is_packaged:
+        print("Server starting in production mode on http://localhost:5000")
+        app.run(debug=False, port=5000, host='localhost', use_reloader=False)
+    else:
+        print("Server starting in development mode on http://localhost:5000")
+        app.run(debug=True, port=5000, host='localhost')

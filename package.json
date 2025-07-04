@@ -39,6 +39,10 @@
       {
         "from": "src",
         "to": "app/src"
+      },
+      {
+        "from": "docs",
+        "to": "app/docs"
       }
     ],
     "win": {
