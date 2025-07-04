@@ -98,10 +98,14 @@ class API {
     }
     
     // Comparison methods
-    async startComparison(selectedSheets) {
+    async startComparison(selectedSheets, comparisonMode = 'full', useDynamicDetection = true) { 
         return this.request('/api/start-comparison', {
             method: 'POST',
-            body: JSON.stringify({ selected_sheets: selectedSheets })
+            body: JSON.stringify({ 
+                selected_sheets: selectedSheets, 
+                comparison_mode: comparisonMode,
+                use_dynamic_detection: useDynamicDetection
+            })
         });
     }
     
@@ -119,13 +123,15 @@ class API {
     async getReports() {
         return this.request('/api/get-reports');
     }
-    
-    async exportReport(reportId, format = 'excel') {
+
+    async exportReport(reportId, format, filename) {
+        console.log(`Exporting report ${reportId} in ${format} format`);
         const response = await this.request('/api/export-report', {
             method: 'POST',
             body: JSON.stringify({
                 report_id: reportId,
-                format: format
+                format: format,
+                filename: filename
             })
         });
         
@@ -135,7 +141,28 @@ class API {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `report_${reportId}.${format === 'excel' ? 'xlsx' : 'csv'}`;
+            
+            // Determine file extension and MIME type
+            let extension, mimeType;
+            switch(format) {
+                case 'excel':
+                    extension = 'xlsx';
+                    mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                    break;
+                case 'csv':
+                    extension = 'csv';
+                    mimeType = 'text/csv';
+                    break;
+                case 'pdf':
+                    extension = 'pdf';
+                    mimeType = 'application/pdf';
+                    break;
+                default:
+                    extension = 'xlsx';
+                    mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+            }
+
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);

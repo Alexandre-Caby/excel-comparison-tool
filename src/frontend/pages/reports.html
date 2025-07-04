@@ -1,3 +1,4 @@
+<!-- Report page -->
 <div class="page-header">
     <h1>Rapports de Comparaison</h1>
     <p>Consultez et exportez vos rapports de comparaison Excel</p>
@@ -48,11 +49,12 @@
                         <div class="metric-label">Date d'analyse</div>
                     </div>
                 </div>
+                <div id="report-summary-table" style="margin-top: 20px;"></div>
             </div>
         </div>
     </div>
     
-    <div class="reports-table-container">
+    <div class="reports-table-container" id="detailed-data-section">
         <div class="card">
             <div class="card-header">📊 Données Détaillées</div>
             <div class="card-body">
@@ -90,7 +92,7 @@
     </div>
 </div>
 
-<div id="no-reports" class="info-box">
+<div id="no-reports" class="info-box" style="display: none;">
     <h3>Aucun rapport disponible</h3>
     <p>Effectuez une comparaison pour générer des rapports.</p>
     <button class="btn primary-btn" onclick="app.navigateToPage('upload')">

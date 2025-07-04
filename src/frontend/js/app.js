@@ -394,8 +394,8 @@ class ECTApp {
         });
         
         // Handle window beforeunload
-        window.addEventListener('beforeunload', (event) => {
-            // Clean up if needed
+        window.addEventListener('beforeunload', function(event) {
+            navigator.sendBeacon('/shutdown');
         });
         
         // Handle help button click

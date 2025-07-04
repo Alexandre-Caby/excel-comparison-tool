@@ -59,7 +59,9 @@
 
 .file-item {
     margin-bottom: 1rem;
-    padding-bottom: 1rem;
+    padding: 15px;
+    border-radius: 6px;
+    background-color: rgba(255, 255, 255, 0.7);
     border-bottom: 1px solid #e2e8f0;
 }
 
@@ -82,7 +84,7 @@
 .config-section label {
     display: block;
     font-weight: 600;
-    margin-bottom: 0.75rem;
+    /* margin-bottom: 0.75rem; */
     color: #334155;
 }
 
@@ -251,4 +253,47 @@
     .config-actions {
         flex-direction: column;
     }
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.radio-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.radio-item .radio-button-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.radio-item label {
+    margin: 0;
+    font-weight: 500;
+}
+
+.radio-item .help-text {
+    margin-left: 1.75rem;
+    margin-top: 0.25rem;
+}
+
+.preview-controls {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.preview-controls label {
+    margin: 0;
+}
+
+.preview-controls select {
+    min-width: 200px;
 }

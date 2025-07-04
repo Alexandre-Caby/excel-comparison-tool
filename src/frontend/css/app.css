@@ -339,3 +339,55 @@ body {
     outline: 3px solid rgba(0, 113, 71, 0.5);
     outline-offset: 2px;
 }
+
+/* Scrollable area for checkboxes */
+.sheets-checkbox-group {
+    max-height: 120px;    
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px 12px;
+    background: #fafbfc;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Align checkbox and label horizontally */
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+}
+
+.checkbox-item input[type="checkbox"] {
+    accent-color: var(--vert-rle-50);
+    margin-right: 6px;
+}
+
+/* Table styles */
+.table-scroll-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+}
+
+.data-table {
+    min-width: 900px;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.data-table th, .data-table td {
+    white-space: pre-line; /* allow line breaks in cells */
+    word-break: break-word;
+    padding: 0.5rem 0.75rem;
+}
+
+.data-table th {
+    position: sticky;
+    top: 0;
+    background: #f8fafc;
+    z-index: 2;
+}

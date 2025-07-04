@@ -174,16 +174,18 @@ class UploadManager {
     
     displayBaseFileInfo(info) {
         const infoDiv = document.getElementById('base-file-info');
-        const previewDiv = document.getElementById('base-file-preview');
         
+        // Update only the base-file-info content, not the preview controls
         infoDiv.innerHTML = `
             <h4>✅ Fichier de base chargé</h4>
-            <p><strong>Nom:</strong> ${info.filename}</p>
-            <p><strong>Feuilles trouvées:</strong> ${info.sheets.length}</p>
-            <p><strong>Feuilles:</strong> ${info.sheets.join(', ')}</p>
+            <div class="file-item">
+                <p><strong>Nom:</strong> ${info.filename}</p>
+                <p><strong>Feuilles trouvées:</strong> ${info.sheets.length}</p>
+                <p><strong>Feuilles:</strong> ${info.sheets.join(', ')}</p>
+            </div>
         `;
         
-        // Populate sheet selector
+        // Update the sheet select options in the existing HTML structure
         const sheetSelect = document.getElementById('base-sheet-select');
         if (sheetSelect) {
             sheetSelect.innerHTML = '';
@@ -195,26 +197,84 @@ class UploadManager {
             });
         }
         
+        // Show the info and preview sections
         utils.toggleElement(infoDiv, true);
-        utils.toggleElement(previewDiv, true);
+        utils.toggleElement(document.getElementById('base-file-preview'), true);
     }
     
     displayComparisonFilesInfo(info) {
         const infoDiv = document.getElementById('comp-files-info');
-        
-        let html = `<h4>✅ ${info.files.length} fichier(s) de comparaison chargé(s)</h4>`;
-        
-        info.files.forEach((file, index) => {
-            html += `
+        const previewDiv = document.getElementById('comp-files-preview');
+
+        // Info section
+        let infoHtml = `<h4>✅ ${info.files.length} fichier(s) de comparaison chargé(s)</h4>`;
+        info.files.forEach((file, idx) => {
+            infoHtml += `
                 <div class="file-item">
-                    <p><strong>Fichier ${index + 1}:</strong> ${file.filename}</p>
+                    <p><strong>Nom:</strong> ${file.filename}</p>
+                    <p><strong>Feuilles trouvées:</strong> ${file.sheets.length}</p>
                     <p><strong>Feuilles:</strong> ${file.sheets.join(', ')}</p>
+                    <div class="preview-controls">
+                        <label for="comp-sheet-select-${file.id}">Sélectionner une feuille :</label>
+                        <select id="comp-sheet-select-${file.id}">
+                            ${file.sheets.map(sheet => `<option value="${sheet}">${sheet}</option>`).join('')}
+                        </select>
+                        <button id="toggle-comp-preview-${file.id}" class="btn secondary-btn">Afficher l'aperçu</button>
+                    </div>
                 </div>
             `;
         });
-        
-        infoDiv.innerHTML = html;
+        infoDiv.innerHTML = infoHtml;
         utils.toggleElement(infoDiv, true);
+
+        // Preview section
+        let previewHtml = '';
+        info.files.forEach((file, idx) => {
+            previewHtml += `
+                <div id="comp-preview-content-${file.id}" class="comp-preview-content" style="display:none; margin-bottom: 20px;"></div>
+            `;
+        });
+        previewDiv.innerHTML = previewHtml;
+        utils.toggleElement(previewDiv, true);
+
+        // Add event listeners for preview buttons and sheet selects
+        info.files.forEach((file, idx) => {
+            const previewBtn = document.getElementById(`toggle-comp-preview-${file.id}`);
+            const sheetSelect = document.getElementById(`comp-sheet-select-${file.id}`);
+            const previewContent = document.getElementById(`comp-preview-content-${file.id}`);
+
+            if (previewBtn && sheetSelect && previewContent) {
+                previewBtn.addEventListener('click', async () => {
+                    if (previewContent.style.display === 'none') {
+                        await this.loadCompareFilePreviewSingle(file, sheetSelect.value, previewContent);
+                        utils.toggleElement(previewContent, true);
+                        previewBtn.textContent = "Masquer l'aperçu";
+                    } else {
+                        utils.toggleElement(previewContent, false);
+                        previewBtn.textContent = "Afficher l'aperçu";
+                    }
+                });
+                sheetSelect.addEventListener('change', async () => {
+                    if (previewContent.style.display !== 'none') {
+                        await this.loadCompareFilePreviewSingle(file, sheetSelect.value, previewContent);
+                    }
+                });
+            }
+        });
+    }
+
+    // Helper for previewing a single comparison file/sheet
+    async loadCompareFilePreviewSingle(file, sheet, previewContent) {
+        if (!sheet || !file) return;
+        try {
+            const result = await api.previewSheet(file.filename, sheet, true);
+            let html = '<h5>Données traitées (après gestion des en-têtes):</h5>';
+            html += utils.createTable(result.processed_preview, result.processed_columns, 'data-table preview-table');
+            previewContent.innerHTML = html;
+        } catch (error) {
+            console.error('Preview error:', error);
+            previewContent.innerHTML = '<p class="error">Erreur lors du chargement de l\'aperçu</p>';
+        }
     }
     
     updateComparisonConfig() {
@@ -226,15 +286,28 @@ class UploadManager {
     }
     
     populateSheetSelector() {
-        const select = document.getElementById('selected-sheets');
-        if (!select || !this.baseFileInfo) return;
-        
-        select.innerHTML = '';
+        const container = document.getElementById('selected-sheets-checkboxes');
+        if (!container || !this.baseFileInfo) return;
+
+        container.innerHTML = '';
         this.baseFileInfo.sheets.forEach(sheet => {
-            const option = document.createElement('option');
-            option.value = sheet;
-            option.textContent = sheet;
-            select.appendChild(option);
+            const id = `sheet-checkbox-${sheet.replace(/\W/g, '_')}`;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'checkbox-item';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = id;
+            checkbox.value = sheet;
+            checkbox.name = 'selected-sheets';
+
+            const label = document.createElement('label');
+            label.htmlFor = id;
+            label.textContent = sheet;
+
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(label);
+            container.appendChild(wrapper);
         });
     }
     
@@ -353,27 +426,40 @@ class UploadManager {
     }
     
     async startComparison() {
-        const selectedSheets = Array.from(document.getElementById('selected-sheets').selectedOptions)
-            .map(option => option.value);
-        
+        const selectedSheets = Array.from(document.querySelectorAll('input[name="selected-sheets"]:checked'))
+            .map(cb => cb.value);
+
+        const modeSelect = document.getElementById('comparison-mode');
+        const comparisonMode = modeSelect ? modeSelect.value : 'full';        
+        if (window.app && window.app.sessionData) {
+            window.app.sessionData.comparisonMode = comparisonMode;
+        }
+        // Get header detection preference
+        const useDynamicDetection = document.getElementById('dynamic-header-detection')?.checked ?? true;
+
         if (selectedSheets.length === 0) {
             app.showNotification('Veuillez sélectionner au moins une feuille à comparer', 'warning');
             return;
         }
-        
+
         if (Object.keys(this.siteMappings).length === 0) {
             app.showNotification('Veuillez définir au moins une correspondance de code de site', 'warning');
             return;
         }
-        
+
         app.showLoading(true);
-        
+
         try {
-            const result = await api.startComparison(selectedSheets);
+            const result = await api.startComparison(
+                selectedSheets, 
+                comparisonMode,
+                useDynamicDetection
+            );
             
             if (result.success) {
                 app.showNotification('Comparaison terminée avec succès', 'success');
                 app.sessionData.comparisonResults = result.results;
+                app.sessionData.comparisonResults.mode = comparisonMode;
                 app.navigateToPage('comparison');
             } else {
                 app.showNotification(result.error || 'Erreur lors de la comparaison', 'error');
@@ -420,6 +506,20 @@ class UploadManager {
             toggleButton.textContent = 'Afficher l\'aperçu';
         }
     }
+
+    async toggleCompareFilePreview(){
+        const previewContent = document.getElementById('comp-preview-content');
+        const toggleButton = document.getElementById('toggle-comp-preview');
+
+        if (previewContent.style.display === 'none') {
+            await this.loadCompareFilePreview();
+            utils.toggleElement(previewContent, true);
+            toggleButton.textContent = 'Masquer l\'aperçu';
+        } else {
+            utils.toggleElement(previewContent, false);
+            toggleButton.textContent = 'Afficher l\'aperçu';
+        }
+    }
     
     async loadBasePreview() {
         const sheetSelect = document.getElementById('base-sheet-select');
@@ -430,12 +530,28 @@ class UploadManager {
         try {
             const result = await api.previewSheet(this.baseFileInfo.filename, sheetSelect.value, true);
             
-            let html = '<h5>Aperçu brut (lignes d\'en-tête):</h5>';
-            html += utils.createTable(result.raw_preview, result.raw_columns, 'data-table preview-table');
-            
-            html += '<h5>Données traitées (après gestion des en-têtes):</h5>';
+            let html = '<h5>Données traitées (après gestion des en-têtes):</h5>';
             html += utils.createTable(result.processed_preview, result.processed_columns, 'data-table preview-table');
             
+            previewContent.innerHTML = html;
+        } catch (error) {
+            console.error('Preview error:', error);
+            previewContent.innerHTML = '<p class="error">Erreur lors du chargement de l\'aperçu</p>';
+        }
+    }
+
+    async loadCompareFilePreview(){
+        const sheetSelect = document.getElementById('comp-sheet-select');
+        const previewContent = document.getElementById('comp-preview-content');
+
+        if (!sheetSelect.value || !this.compFilesInfo[sheetSelect.value]) return;
+
+        try {
+            const result = await api.previewSheet(this.compFilesInfo[sheetSelect.value].filename, sheetSelect.value, true);
+
+            let html = '<h5>Données traitées (après gestion des en-têtes):</h5>';
+            html += utils.createTable(result.processed_preview, result.processed_columns, 'data-table preview-table');
+
             previewContent.innerHTML = html;
         } catch (error) {
             console.error('Preview error:', error);
@@ -447,6 +563,13 @@ class UploadManager {
         const previewContent = document.getElementById('base-preview-content');
         if (previewContent.style.display !== 'none') {
             await this.loadBasePreview();
+        }
+    }
+
+    async onCompSheetChange() {
+        const previewContent = document.getElementById('comp-preview-content');
+        if (previewContent.style.display !== 'none') {
+            await this.loadCompareFilePreview();
         }
     }
 }

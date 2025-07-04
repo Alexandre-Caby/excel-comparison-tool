@@ -69,7 +69,13 @@
                 .replace(/\*(.+?)\*/g, '<em>$1</em>')
                 
                 // Links
-                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="help-link" target="_blank">$1</a>');
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+                    if (url.startsWith('#')) {
+                        return `<a href="${url}" class="help-link toc-link">${text}</a>`;
+                    } else {
+                        return `<a href="${url}" class="help-link">${text}</a>`;
+                    }
+                })
 
             // Convert newlines to paragraphs
             const paragraphs = html.split(/\n\n+/);
@@ -140,6 +146,12 @@
                         </div>
                     </div>
                 `;
+
+                helpContent.querySelectorAll('a.markdown-link').forEach(a => {
+                if (a.getAttribute('href')?.startsWith('#')) {
+                    a.removeAttribute('target');
+                }
+                });
                 
                 // Add smooth scrolling for TOC links
                 document.querySelectorAll('.toc-link').forEach(link => {

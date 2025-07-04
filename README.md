@@ -1,15 +1,23 @@
 # ECT Technis - Excel Comparison Tool
 
-A powerful tool for comparing and analyzing PREPA PHP Excel files with other Excel sources to identify differences and inconsistencies.
+A powerful tool for comparing and analyzing Excel files with other Excel sources to identify differences and inconsistencies.
 
 ## Features
 
 - **File Comparison**: Compare PREPA PHP files with other Excel sources
 - **Site Matching**: Intelligent mapping using site codes (LE, BGL, etc.)
 - **Difference Detection**: Identify modifications between files
-- **Duplicate Detection**: Find duplicate entries across datasets
-- **Report Generation**: Create detailed Excel and CSV reports
+- **Duplicate Detection**: Find duplicate entries across datasets (now using composite keys: Serie, Locomotive, CodeOp)
+- **Enhanced Report Generation**: 
+  - **Excel Reports**: Visually rich Excel reports with color-coded differences and formatted worksheets
+  - **CSV Export**: Optimized classic CSV format with proper encoding for European Excel compatibility
+  - **PDF Reports**: Professional PDF reports with data visualization charts and robust formatting
+- **Data Visualization**: Charts and graphs in reports for better data interpretation
 - **User-Friendly Interface**: Modern and intuitive web application
+- **Custom Export Filenames**: Set the export filename from the frontend, respected by the backend
+- **Fuzzy Matching**: Enhanced comparison using fuzzy logic for string differences
+- **Smooth Documentation Navigation**: In-app help with smooth scrolling and robust anchor navigation
+- **Robust Error Handling**: Improved stability for PDF generation and temporary file operations
 
 ## Architecture
 
@@ -22,6 +30,7 @@ A powerful tool for comparing and analyzing PREPA PHP Excel files with other Exc
 - **REST API**: Endpoints for file processing
 - **Comparison Engine**: Advanced logic for analyzing Excel files
 - **Data Management**: Structured data processing
+- **Reporting System**: Flexible output formats with optimized data handling
 
 ## User Guide
 
@@ -30,18 +39,24 @@ Check our [complete user guide](./docs/user_guide.md) for detailed instructions 
 - Configuring comparisons
 - Interpreting results
 - Generating reports
+- Exporting data in different formats
 
 ## Installation and Deployment
 
 ### Prerequisites
 - Modern web browser (Chrome, Firefox, Edge)
 - Web server with Python support
+- Python 3.9+ with the following packages:
+  - pandas
+  - reportlab
+  - xlsxwriter
+  - flask
 
 ### Development Setup
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/excel-comparison-tool.git
+   git clone https://github.com/Alexandre-Caby/excel-comparison-tool
    cd excel-comparison-tool
    ```
 
@@ -95,4 +110,4 @@ excel-comparison-tool/
 
 ## Support
 
-For questions or support, please contact [alexandre.caby@sncf.fr](mailto:alexandre.caby@sncf.fr).
+For questions or support, please contact the owner.
