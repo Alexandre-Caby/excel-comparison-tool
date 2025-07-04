@@ -26,7 +26,6 @@
     "files": [
       "secure_src/**/*",
       "docs/**/*",
-      "requirements.txt",
       "!secure_src/**/*.pyc",
       "!secure_src/**/__pycache__",
       "!**/.git",
@@ -36,6 +35,10 @@
       {
         "from": "requirements.txt",
         "to": "requirements.txt"
+      },
+      {
+        "from": "secure_src",
+        "to": "app/secure_src"
       }
     ],
     "win": {
@@ -53,8 +56,7 @@
           ]
         }
       ],
-      "icon": "secure_src/frontend/images/icon_excel_comparison.ico",
-      "requestedExecutionLevel": "asInvoker"
+      "icon": "secure_src/frontend/images/icon_excel_comparison.ico"
     },
     "nsis": {
       "oneClick": false,
