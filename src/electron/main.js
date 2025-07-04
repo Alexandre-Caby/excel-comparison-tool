@@ -72,40 +72,62 @@ function createWindow() {
 }
 
 function startPythonServer() {
-  const pythonScript = path.join(__dirname, '../backend/app.py');
+  let pythonScript;
+  let pythonExecutable;
+  
+  if (app.isPackaged) {
+    // In production: use resources path
+    const resourcesPath = process.resourcesPath;
+    pythonScript = path.join(resourcesPath, 'app', 'secure_src', 'backend', 'app.py');
+    
+    // Use bundled Python if possible (use pythonw.exe to hide console window)
+    pythonExecutable = path.join(resourcesPath, 'python', 'pythonw.exe');
+    if (!require('fs').existsSync(pythonExecutable)) {
+      // Fallback to system Python
+      pythonExecutable = 'pythonw';
+    }
+  } else {
+    // In development
+    pythonScript = path.join(__dirname, '../backend/app.py');
+    pythonExecutable = 'python';
+  }
   
   console.log('Starting Python server...');
   console.log('Python script path:', pythonScript);
+  console.log('Python executable:', pythonExecutable);
   
-  // Try different Python commands
-  const pythonCommands = ['python', 'python3', 'py'];
-  let pythonCmd = 'python';
-  
-  // For Windows, prefer 'py' or 'python'
-  if (process.platform === 'win32') {
-    pythonCmd = 'python';
+
+  try {
+    pythonProcess = spawn(pythonExecutable, [pythonScript], {
+      cwd: path.dirname(pythonScript),
+      env: { ...process.env, PYTHONUNBUFFERED: '1' },
+      windowsHide: true
+    });
+
+    console.log(`Python PID: ${pythonProcess.pid}`);
+    
+    pythonProcess.stdout.on('data', (data) => {
+      console.log(`Python stdout: ${data.toString()}`);
+    });
+    
+    pythonProcess.stderr.on('data', (data) => {
+      console.error(`Python stderr: ${data.toString()}`);
+    });
+    
+    pythonProcess.on('close', (code) => {
+      console.log(`Python process exited with code ${code}`);
+    });
+    
+    pythonProcess.on('error', (error) => {
+      console.error('Failed to start Python process:', error);
+      dialog.showErrorBox(
+        'Backend Error',
+        `Failed to start Python backend: ${error.message}\n\nPlease make sure Python is installed.`
+      );
+    });
+  } catch (error) {
+    console.error('Exception starting Python process:', error);
   }
-  
-  pythonProcess = spawn(pythonCmd, [pythonScript], {
-    cwd: path.dirname(pythonScript),
-    env: { ...process.env, PYTHONUNBUFFERED: '1' }
-  });
-  
-  pythonProcess.stdout.on('data', (data) => {
-    console.log(`Python stdout: ${data.toString()}`);
-  });
-  
-  pythonProcess.stderr.on('data', (data) => {
-    console.error(`Python stderr: ${data.toString()}`);
-  });
-  
-  pythonProcess.on('close', (code) => {
-    console.log(`Python process exited with code ${code}`);
-  });
-  
-  pythonProcess.on('error', (error) => {
-    console.error('Failed to start Python process:', error);
-  });
 }
 
 async function waitForBackend(maxAttempts = 30) {
