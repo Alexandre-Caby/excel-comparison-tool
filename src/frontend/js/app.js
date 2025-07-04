@@ -171,26 +171,56 @@ class ECTApp {
     async loadHelpContent() {
         try {
             const helpContent = document.getElementById('help-content');
-            if (!helpContent) return;
-            
-            // Load content from user guide markdown
-            const response = await fetch('/docs/user_guide.md');
-            if (!response.ok) {
-                throw new Error('Failed to load help content');
-            }
-            
-            const markdown = await response.text();
-            // Display markdown content (simple implementation)
+            if (!helpContent) return;            
+            // Show loading message
             helpContent.innerHTML = `
-                <div class="card">
-                    <div class="card-header">Guide d'utilisation</div>
-                    <div class="card-body markdown-body">
-                        ${this.simpleMarkdownToHtml(markdown)}
-                    </div>
+                <div class="loading-docs">
+                    <div class="loading-spinner"></div>
+                    <p>Chargement du guide d'utilisation...</p>
                 </div>
             `;
+            
+            try {
+                // Use the correct Flask route
+                const response = await fetch('/docs/user_guide.md');
+                if (!response.ok) {
+                    throw new Error('Failed to load help content');
+                }
+                
+                const markdown = await response.text();
+                helpContent.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">Guide d'utilisation</div>
+                        <div class="card-body markdown-body">
+                            ${this.simpleMarkdownToHtml(markdown)}
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading help content:', error);
+                
+                // Show fallback content
+                helpContent.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">Guide d'utilisation</div>
+                        <div class="card-body markdown-body">
+                            <h1>Guide d'utilisation - ECT Technis</h1>
+                            <p>Le guide d'utilisation n'est pas disponible actuellement.</p>
+                            <p>Veuillez contacter le support technique pour obtenir de l'aide.</p>
+                            
+                            <h2>Utilisation de base</h2>
+                            <ol>
+                                <li>Téléchargez vos fichiers Excel dans la section "Télécharger"</li>
+                                <li>Configurez vos paramètres de comparaison</li>
+                                <li>Lancez la comparaison</li>
+                                <li>Consultez les résultats et générez des rapports</li>
+                            </ol>
+                        </div>
+                    </div>
+                `;
+            }
         } catch (error) {
-            console.error('Error loading help content:', error);
+            console.error('Error initializing help content:', error);
             this.showNotification('Erreur lors du chargement de l\'aide', 'error');
         }
     }
@@ -292,7 +322,7 @@ class ECTApp {
                 `;
                 
                 try {
-                    const response = await fetch(`../../docs/legal/${docName}`);
+                    const response = await fetch(`/docs/legal/${docName}`);
                     
                     if (!response.ok) {
                         throw new Error(`Failed to load document: ${docName}`);
