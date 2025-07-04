@@ -132,81 +132,29 @@ jobs:
     
     - name: Prepare secure build
       run: |
-        # Create secure build directory
-        New-Item -Path "secure_src" -ItemType Directory -Force
-        New-Item -Path "secure_src\backend" -ItemType Directory -Force
-        New-Item -Path "secure_src\core" -ItemType Directory -Force
-        New-Item -Path "secure_src\models" -ItemType Directory -Force
-        New-Item -Path "secure_src\utils" -ItemType Directory -Force
+        # Don't create secure_src - keep original src structure
+        Write-Host "Using original src directory structure..."
         
-        # Copy Python files with error checking
-        Write-Host "Copying Python backend files..."
-        if (Test-Path "src\backend") {
-          Copy-Item src\backend\*.py secure_src\backend\ -Force -ErrorAction SilentlyContinue
-          Write-Host "Backend files copied ✓"
-        }
-        
-        if (Test-Path "src\core") {
-          Copy-Item src\core\*.py secure_src\core\ -Force -ErrorAction SilentlyContinue
-          Write-Host "Core files copied ✓"
-        }
-        
-        if (Test-Path "src\models") {
-          Copy-Item src\models\*.py secure_src\models\ -Force -ErrorAction SilentlyContinue
-          Write-Host "Models files copied ✓"
-        }
-        
-        if (Test-Path "src\utils") {
-          Copy-Item src\utils\*.py secure_src\utils\ -Force -ErrorAction SilentlyContinue
-          Write-Host "Utils files copied ✓"
-        }
-        
-        # Copy frontend and electron
-        Write-Host "Copying frontend and electron files..."
-        Copy-Item src\frontend secure_src\ -Recurse -Force
-        Copy-Item src\electron secure_src\ -Recurse -Force
-        Write-Host "Frontend and Electron files copied ✓"
-        
-        # Copy documentation if exists
-        if (Test-Path "docs") {
-          Copy-Item docs secure_src\ -Recurse -Force
-          Write-Host "Documentation copied ✓"
-        }
-        
-        # Copy requirements.txt
-        Copy-Item requirements.txt secure_src\requirements.txt -Force
-        Write-Host "Requirements.txt copied ✓"
-        
-        # Verify critical files were copied
+        # Just verify files exist
         $criticalFiles = @(
-          "secure_src\backend\app.py",
-          "secure_src\electron\main.js",
-          "secure_src\frontend\index.html",
-          "secure_src\frontend\images\icon_excel_comparison.ico"
+          "src\backend\app.py",
+          "src\electron\main.js", 
+          "src\frontend\index.html",
+          "src\frontend\images\icon_excel_comparison.ico"
         )
         
         foreach ($file in $criticalFiles) {
           if (!(Test-Path $file)) {
-            Write-Error "Critical file not copied: $file"
+            Write-Error "Critical file not found: $file"
             exit 1
           }
         }
         Write-Host "All critical files verified ✓"
-    
+
     - name: Update package.json for build
       run: |
-        # Create backup
-        Copy-Item package.json package-original.json
-        
-        # Update package.json to use secure source
-        $packageJson = Get-Content -Path package.json -Raw | ConvertFrom-Json
-        $packageJson.main = "secure_src/electron/main.js"
-        
-        # Fix icon path to use copied icon
-        $packageJson.build.win.icon = "secure_src/frontend/images/icon_excel_comparison.ico"
-        
-        $packageJson | ConvertTo-Json -Depth 100 | Set-Content -Path package.json
-        Write-Host "Package.json updated for build ✓"
+        # No changes needed - keep original paths
+        Write-Host "Using original package.json configuration ✓"
     
     - name: Build Electron app
       run: |

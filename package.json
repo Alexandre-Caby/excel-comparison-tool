@@ -24,10 +24,10 @@
       "buildResources": "build"
     },
     "files": [
-      "secure_src/**/*",
+      "src/**/*",
       "docs/**/*",
-      "!secure_src/**/*.pyc",
-      "!secure_src/**/__pycache__",
+      "!src/**/*.pyc",
+      "!src/**/__pycache__",
       "!**/.git",
       "!**/node_modules/.cache"
     ],
@@ -37,8 +37,8 @@
         "to": "requirements.txt"
       },
       {
-        "from": "secure_src",
-        "to": "app/secure_src"
+        "from": "src",
+        "to": "app/src"
       }
     ],
     "win": {
@@ -56,7 +56,7 @@
           ]
         }
       ],
-      "icon": "secure_src/frontend/images/icon_excel_comparison.ico"
+      "icon": "src/frontend/images/icon_excel_comparison.ico"
     },
     "nsis": {
       "oneClick": false,
