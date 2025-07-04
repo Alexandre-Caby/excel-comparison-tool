@@ -19,6 +19,10 @@
     border-bottom: 1px solid var(--border-color);
 }
 
+.card-header h4 {
+    color: #fff !important;
+}
+
 .card-body {
     padding: var(--spacing-lg);
 }

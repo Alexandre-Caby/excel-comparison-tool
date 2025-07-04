@@ -37,12 +37,20 @@
                     <div class="metric-label">Différences trouvées</div>
                 </div>
                 <div class="metric-card">
+                    <div class="metric-value" id="total-duplicates">0</div>
+                    <div class="metric-label">Duplicatas trouvés</div>
+                </div>
+                <div class="metric-card">
                     <div class="metric-value" id="total-cells">0</div>
                     <div class="metric-label">Cellules analysées</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-value" id="execution-time">0s</div>
                     <div class="metric-label">Temps d'exécution</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="match-rate">0%</div>
+                    <div class="metric-label">Taux de correspondance</div>
                 </div>
             </div>
 
@@ -60,12 +68,9 @@
                                 </div>
                             </div>
                             <div class="col-6">
-                                <div class="file-selector">
-                                    <label for="file-select">Type de données :</label>
+                                <div class="file-selector" id="file-selector" style="display:none">
+                                    <label for="file-select">Fichier de comparaison :</label>
                                     <select id="file-select" class="form-control">
-                                        <option value="differences">Différences</option>
-                                        <option value="duplicates">Doublons</option>
-                                        <option value="summary">Résumé</option>
                                     </select>
                                 </div>
                             </div>
@@ -74,35 +79,55 @@
                 </div>
             </div>
 
-            <div class="results-tables">
-                <div class="differences-section">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>🔍 Différences détectées</h4>
-                        </div>
-                        <div class="card-body">
-                            <div id="differences-content">
-                                <p class="no-data">Sélectionnez une feuille pour voir les différences</p>
-                            </div>
-                        </div>
+            <!-- Summary Table -->
+            <div id="summary-section" class="summary-section" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h4>📊 Résumé détaillé de la comparaison</h4>
                     </div>
-                </div>
-
-                <div class="duplicates-section">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4>📋 Doublons identifiés</h4>
-                        </div>
-                        <div class="card-body">
-                            <div id="duplicates-content">
-                                <p class="no-data">Sélectionnez une feuille pour voir les doublons</p>
-                            </div>
+                    <div class="card-body">
+                        <div id="summary-content">
+                            <p>Aucune donnée disponible</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="actions-section">
+            <!-- Differences Section -->
+            <div class="differences-section" id="differences-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 id="differences-title">🔍 Différences détectées</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="filters-section">
+                            <div id="filters-container" class="filters-container"></div>
+                            <div id="filter-info" class="filter-info"></div>
+                        </div>
+                        <div id="differences-pagination" class="pagination-controls"></div>
+                        <div id="differences-content">
+                            <p class="no-data">Sélectionnez une feuille pour voir les différences</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Duplicates Section -->
+            <div class="duplicates-section" id="duplicates-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 id="duplicates-title">📋 Doublons identifiés</h4>
+                    </div>
+                    <div class="card-body">
+                        <div id="duplicates-pagination" class="pagination-controls"></div>
+                        <div id="duplicates-content">
+                            <p class="no-data">Sélectionnez une feuille pour voir les doublons</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions-section" id="comparison-actions">
                 <div class="card">
                     <div class="card-header">Actions disponibles</div>
                     <div class="card-body">
@@ -110,16 +135,17 @@
                             <button class="btn primary-btn" onclick="app.navigateToPage('reports')">
                                 📊 Voir les Rapports
                             </button>
-                            <button class="btn secondary-btn" id="export-results-btn">
-                                💾 Exporter les Résultats
+                            <button class="btn secondary-btn" id="save-report">
+                                💾 Sauvegarder le rapport
                             </button>
-                            <button class="btn secondary-btn" onclick="app.navigateToPage('upload')">
+                            <button class="btn secondary-btn" id="new-comparison">
                                 🔄 Nouvelle Comparaison
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 </div>

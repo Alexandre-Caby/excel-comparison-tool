@@ -1,4 +1,4 @@
-name: Build and Release Excel Comparison Tool
+name: Build and Release ECT Technis Electron App
 
 permissions:
   contents: write
@@ -22,32 +22,30 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.11'
         cache: 'pip'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
         
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pyinstaller
-        pip install -r requirements.txt
-    
-    - name: Get version from file
+    - name: Get version
       id: get_version
       run: |
         if (Test-Path version.txt) {
           $version = Get-Content version.txt -Raw
           $version = $version.Trim()
-          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
         } else {
-          # Get version from git tag or default
-          $gitTag = git describe --tags --exact-match 2>$null
-          if ($gitTag) {
-            $version = $gitTag -replace '^v', ''
-          } else {
-            $version = "1.0.0"
-          }
-          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          $version = "1.1.0"
         }
+        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+        
+        # Update package.json version
+        $packageJson = Get-Content -Path package.json -Raw | ConvertFrom-Json
+        $packageJson.version = $version
+        $packageJson | ConvertTo-Json -Depth 100 | Set-Content -Path package.json
     
     - name: Check if tag exists
       id: check_tag
@@ -59,164 +57,190 @@ jobs:
           echo "TAG_EXISTS=false" >> $env:GITHUB_OUTPUT
         }
     
-    - name: Verify project structure
+    - name: Install dependencies
       run: |
-        # Verify entry point exists
-        if (Test-Path src/backend/app.py) {
-          echo "Entry point src/backend/app.py exists"
-        } else {
-          echo "Entry point src/backend/app.py does not exist"
-          Get-ChildItem -Path . -Recurse -Filter "*.py" | Select-Object FullName
-          exit 1
-        }
+        # Python dependencies
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
         
-        # Check for icon file C:\Users\alexa\Desktop\Projets\excel-comparison-tool\src\frontend\images\icon_excel_comparison.ico
-        if (Test-Path "src/frontend/images/icon_excel_comparison.ico") {
-          echo "Icon file found: src/frontend/images/icon_excel_comparison.ico"
-        } else {
-          echo "WARNING: No icon file found in src/frontend/images"
-        }
-        
-        # List project structure for debugging
-        echo "Project structure:"
-        Get-ChildItem -Path . -Recurse | Where-Object { $_.Name -match '\.(py|txt|md|ico)$' } | Select-Object FullName
-
-    - name: Prepare build directory (without obfuscation)
+        # Node.js dependencies
+        npm install --legacy-peer-deps
+        npm install -g electron-builder
+    
+    - name: Create CHANGELOG if missing
       run: |
-        # Create output directory
-        New-Item -Path "dist_build" -ItemType Directory -Force
+        if (!(Test-Path "CHANGELOG.md")) {
+          @"
+        # Changelog
         
-        # Copy all source files without obfuscation
-        Copy-Item -Path "src/*" -Destination "dist_build/" -Recurse -Force
+        ## v${{ steps.get_version.outputs.VERSION }}
         
-        # Copy other assets if needed
-        if (Test-Path "docs") {
-          Copy-Item -Path "docs" -Destination "dist_build/" -Recurse -Force
-          echo "Docs copied to dist_build/docs"
-        }
+        ### Features
+        - Excel file comparison tool with advanced matching algorithms
+        - Dynamic header detection for flexible file structures  
+        - Multiple comparison modes (full, quick, custom)
+        - Comprehensive report generation (Excel, CSV, PDF formats)
+        - Site mapping and configuration management
+        - Real-time comparison progress tracking
         
-        if (Test-Path "static") {
-          Copy-Item -Path "static" -Destination "dist_build/" -Recurse -Force
-        }
+        ### Technical
+        - Built with Electron + Flask architecture
+        - Python backend with pandas/openpyxl for Excel processing
+        - Modern HTML5/CSS3/JavaScript frontend
+        - Windows x64 native application
+        - Portable and installer distribution options
+        - No external dependencies required
         
-        # Copy icon file if it exists
-        if (Test-Path "src/frontend/images/icon_excel_comparison.ico") {
-          Copy-Item -Path "src/frontend/images/icon_excel_comparison.ico" -Destination "dist_build/frontend/images/" -Force
-          echo "Icon copied to dist_build/frontend/images/"
+        ### Installation
+        - **ECT_Technis_Setup_v${{ steps.get_version.outputs.VERSION }}.exe**: Full installer with shortcuts
+        - **ECT_Technis_Portable_v${{ steps.get_version.outputs.VERSION }}.exe**: Portable version, no installation needed
+        
+        ### System Requirements  
+        - Windows 10/11 (x64)
+        - 4GB RAM recommended
+        - 100MB free disk space
+        "@ | Set-Content -Path "CHANGELOG.md"
+          Write-Host "CHANGELOG.md created"
         } else {
-          echo "No icon file found to copy"
+          Write-Host "CHANGELOG.md already exists"
         }
-        
-        # List final directory structure for verification
-        echo "Final dist_build structure:"
-        Get-ChildItem -Path "dist_build" -Recurse | Select-Object FullName
-
-    - name: Build executable with PyInstaller
+    
+    - name: Verify source files exist
       run: |
-        # Verify frontend directory exists before building
-        if (Test-Path "dist_build/frontend") {
-          echo "Frontend directory found at dist_build/frontend"
-        } else {
-          echo "ERROR: Frontend directory not found at expected location"
-          Get-ChildItem -Path "dist_build" -Recurse
-          exit 1
-        }
+        $requiredFiles = @(
+          "src/backend/app.py",
+          "src/electron/main.js", 
+          "src/frontend/index.html",
+          "src/frontend/images/icon_excel_comparison.ico",
+          "package.json",
+          "requirements.txt"
+        )
         
-        # Prepare PyInstaller command
-        $version = "${{ steps.get_version.outputs.VERSION }}"
-        
-        # Check icon file properties and convert if needed
-        $iconPath = ""
-        if (Test-Path "dist_build/frontend/images/icon_excel_comparison.ico") {
-          $iconPath = "dist_build/frontend/images/icon_excel_comparison.ico"
-          $iconFile = Get-Item $iconPath
-          echo "Icon file found: $iconPath"
-          echo "Icon file size: $($iconFile.Length) bytes"
-          
-          # Verify icon is valid by trying to copy it to a temp location
-          try {
-            Copy-Item $iconPath "temp_icon.ico" -Force
-            Remove-Item "temp_icon.ico" -Force
-            echo "Icon file validation: PASSED"
-          } catch {
-            echo "Icon file validation: FAILED - $($_.Exception.Message)"
-            $iconPath = ""
+        $missingFiles = @()
+        foreach ($file in $requiredFiles) {
+          if (!(Test-Path $file)) {
+            $missingFiles += $file
+            Write-Warning "Missing required file: $file"
           }
         }
         
-        # Construct PyInstaller command
-        $cmd = "python -m PyInstaller --onefile --windowed " +
-               "--name ""ECT_Technis_v$version"" " +
-               "--add-data ""dist_build/frontend;src/frontend"" " +
-                "--add-data ""dist_build/frontend/images/icon_excel_comparison.ico;src/frontend/images"" " +
-               "--add-data ""version.txt;."" " +
-               "--hidden-import flask " +
-               "--hidden-import flask_cors " + 
-               "--hidden-import pandas " +
-               "--hidden-import openpyxl " +
-               "--hidden-import xlsxwriter " +
-               "--hidden-import werkzeug " +
-               "--hidden-import numpy " +
-               "--hidden-import waitress " +
-               "--paths=""dist_build"" " +
-               "--clean "
-        
-        # Add docs if they exist
-        if (Test-Path "dist_build/docs") {
-          $cmd += "--add-data ""dist_build/docs;docs"" "
-          echo "Including docs directory"
-        }
-        
-        # Add icon with absolute path if it exists and is valid
-        if ($iconPath -ne "") {
-          $absoluteIconPath = (Resolve-Path $iconPath).Path
-          $cmd += "--icon=""$absoluteIconPath"" "
-          echo "Using custom icon: $absoluteIconPath"
-        } else {
-          echo "No valid custom icon found - using default Windows icon"
-        }
-        
-        # Add the main script
-        $cmd += "dist_build/backend/app.py"
-        
-        # Execute PyInstaller command
-        echo "Executing PyInstaller with command: $cmd"
-        Invoke-Expression $cmd
-        
-        # Verify the build
-        if (Test-Path "dist/ECT_Technis_v$version.exe") {
-          echo "Build successful"
-          $fileSize = (Get-Item "dist/ECT_Technis_v$version.exe").Length
-          echo "Executable size: $([math]::Round($fileSize/1MB, 2)) MB"
-          
-          # Try to extract and verify icon information
-          echo "Executable created successfully with icon support"
-        } else {
-          echo "Build failed - executable not found"
-          Get-ChildItem -Path "dist" -ErrorAction SilentlyContinue
+        if ($missingFiles.Count -gt 0) {
+          Write-Error "Build cannot continue - missing required files: $($missingFiles -join ', ')"
           exit 1
         }
-
-    - name: Test executable
+        Write-Host "All required files found ✓"
+    
+    - name: Prepare secure build
       run: |
-        $version = "${{ steps.get_version.outputs.VERSION }}"
-        # Basic test to ensure the executable can start
-        $proc = Start-Process -FilePath "dist/ECT_Technis_v$version.exe" -PassThru -WindowStyle Hidden
-        Start-Sleep -Seconds 10
-        if (-not $proc.HasExited) {
-          Stop-Process -Id $proc.Id -Force
-          echo "Executable test passed - application started successfully"
-        } else {
-          echo "Warning: Executable exited quickly - may have issues"
-          # Don't fail the build for this warning
+        # Create secure build directory
+        New-Item -Path "secure_src" -ItemType Directory -Force
+        New-Item -Path "secure_src\backend" -ItemType Directory -Force
+        New-Item -Path "secure_src\core" -ItemType Directory -Force
+        New-Item -Path "secure_src\models" -ItemType Directory -Force
+        New-Item -Path "secure_src\utils" -ItemType Directory -Force
+        
+        # Copy Python files with error checking
+        Write-Host "Copying Python backend files..."
+        if (Test-Path "src\backend") {
+          Copy-Item src\backend\*.py secure_src\backend\ -Force -ErrorAction SilentlyContinue
+          Write-Host "Backend files copied ✓"
         }
-
+        
+        if (Test-Path "src\core") {
+          Copy-Item src\core\*.py secure_src\core\ -Force -ErrorAction SilentlyContinue
+          Write-Host "Core files copied ✓"
+        }
+        
+        if (Test-Path "src\models") {
+          Copy-Item src\models\*.py secure_src\models\ -Force -ErrorAction SilentlyContinue
+          Write-Host "Models files copied ✓"
+        }
+        
+        if (Test-Path "src\utils") {
+          Copy-Item src\utils\*.py secure_src\utils\ -Force -ErrorAction SilentlyContinue
+          Write-Host "Utils files copied ✓"
+        }
+        
+        # Copy frontend and electron
+        Write-Host "Copying frontend and electron files..."
+        Copy-Item src\frontend secure_src\ -Recurse -Force
+        Copy-Item src\electron secure_src\ -Recurse -Force
+        Write-Host "Frontend and Electron files copied ✓"
+        
+        # Copy documentation if exists
+        if (Test-Path "docs") {
+          Copy-Item docs secure_src\ -Recurse -Force
+          Write-Host "Documentation copied ✓"
+        }
+        
+        # Copy requirements.txt
+        Copy-Item requirements.txt secure_src\requirements.txt -Force
+        Write-Host "Requirements.txt copied ✓"
+        
+        # Verify critical files were copied
+        $criticalFiles = @(
+          "secure_src\backend\app.py",
+          "secure_src\electron\main.js",
+          "secure_src\frontend\index.html",
+          "secure_src\frontend\images\icon_excel_comparison.ico"
+        )
+        
+        foreach ($file in $criticalFiles) {
+          if (!(Test-Path $file)) {
+            Write-Error "Critical file not copied: $file"
+            exit 1
+          }
+        }
+        Write-Host "All critical files verified ✓"
+    
+    - name: Update package.json for build
+      run: |
+        # Create backup
+        Copy-Item package.json package-original.json
+        
+        # Update package.json to use secure source
+        $packageJson = Get-Content -Path package.json -Raw | ConvertFrom-Json
+        $packageJson.main = "secure_src/electron/main.js"
+        
+        # Fix icon path to use copied icon
+        $packageJson.build.win.icon = "secure_src/frontend/images/icon_excel_comparison.ico"
+        
+        $packageJson | ConvertTo-Json -Depth 100 | Set-Content -Path package.json
+        Write-Host "Package.json updated for build ✓"
+    
+    - name: Build Electron app
+      run: |
+        Write-Host "Building Electron application..."
+        
+        # Build both installer and portable versions
+        npx electron-builder --win --x64 --publish=never
+        
+        # Verify build outputs
+        if (Test-Path "dist") {
+          Write-Host "`nBuild artifacts created:"
+          Get-ChildItem -Path dist -Filter "*.exe" | ForEach-Object {
+            $sizeInMB = [math]::Round($_.Length / 1MB, 2)
+            Write-Host "  ✓ $($_.Name) - Size: $sizeInMB MB"
+          }
+        } else {
+          Write-Error "Build failed - no dist folder created"
+          exit 1
+        }
+    
+    - name: Restore original package.json
+      run: |
+        if (Test-Path "package-original.json") {
+          Copy-Item package-original.json package.json -Force
+          Remove-Item package-original.json
+          Write-Host "Original package.json restored ✓"
+        }
+    
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: ECT_Technis_v${{ steps.get_version.outputs.VERSION }}
         path: |
-          dist/ECT_Technis_v${{ steps.get_version.outputs.VERSION }}.exe
+          dist/*.exe
         retention-days: 90
     
     - name: Create and push tag if needed
@@ -227,25 +251,13 @@ jobs:
         git tag -a v${{ steps.get_version.outputs.VERSION }} -m "Release version ${{ steps.get_version.outputs.VERSION }}"
         git push origin v${{ steps.get_version.outputs.VERSION }}
 
-    - name: Generate CHANGELOG.md if not exists
-      run: |
-        if (-not (Test-Path CHANGELOG.md)) {
-          echo "# Changelog" > CHANGELOG.md
-          echo "All notable changes to this project will be documented in this file." >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "## [${{ steps.get_version.outputs.VERSION }}] - $(Get-Date -Format 'yyyy-MM-dd')" >> CHANGELOG.md
-          echo "- Initial release" >> CHANGELOG.md
-        } else {
-          echo "CHANGELOG.md already exists, skipping generation."
-        }
-
     - name: Create GitHub Release
       if: steps.check_tag.outputs.TAG_EXISTS == 'false'
       uses: softprops/action-gh-release@v1
       with:
         tag_name: v${{ steps.get_version.outputs.VERSION }}
         files: |
-          dist/ECT_Technis_v${{ steps.get_version.outputs.VERSION }}.exe
+          dist/*.exe
         name: ECT Technis v${{ steps.get_version.outputs.VERSION }}
         body_path: CHANGELOG.md
         draft: false
@@ -253,15 +265,3 @@ jobs:
         fail_on_unmatched_files: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Upload debug artifacts on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: debug-artifacts-${{ steps.get_version.outputs.VERSION }}
-        path: |
-          dist_build/
-          build/
-          *.spec
-          *.log
-        retention-days: 7

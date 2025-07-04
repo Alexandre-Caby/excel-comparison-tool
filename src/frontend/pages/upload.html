@@ -5,10 +5,46 @@
         <p>Importez vos fichiers Excel pour commencer la comparaison</p>
     </div>
 
+    <!-- Help and Information section -->
+    <div class="help-section">
+        <div class="card">
+            <div class="card-header">ℹ️ Informations importantes</div>
+            <div class="card-body">
+                <div class="help-content">
+                    <h4>Format des fichiers :</h4>
+                    <ul>
+                        <li><strong>Fichier de base pour la comparaison :</strong> En-têtes à la ligne 3 ou récupérés dynamiquement</li>
+                        <li><strong>Fichiers de comparaison :</strong> En-têtes à la ligne 8 ou récupérés dynamiquement</li>
+                        <li><strong>Formats supportés :</strong> .xlsx, .xls</li>
+                        <li><strong>Taille maximale :</strong> 200Mo par fichier</li>
+                    </ul>
+                    
+                    <h4>Codes de sites courants :</h4>
+                    <ul>
+                        <li><strong>LE :</strong> Lens</li>
+                        <li><strong>BGL :</strong> BGL</li>
+                        <li>Vous pouvez ajouter d'autres correspondances selon vos besoins</li>
+                    </ul>
+                    
+                    <h4>Processus de comparaison :</h4>
+                    <ol>
+                        <li>Téléchargez le fichier de base pour la comparaison</li>
+                        <li>Téléchargez un ou plusieurs fichiers de comparaison</li>
+                        <li>Configurez les options de comparaison</li>
+                        <li>Configurez les correspondances de codes de sites</li>
+                        <li>Sélectionnez les feuilles à comparer</li>
+                        <li>Lancez la comparaison</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="upload-container">
+        <!-- Base File Upload -->
         <div class="upload-section">
             <div class="card">
-                <div class="card-header">📁 Fichier PREPA PHP (Base)</div>
+                <div class="card-header">📁 Fichier de base pour la comparaison</div>
                 <div class="card-body">
                     <div class="file-upload-area" id="base-file-area">
                         <div class="upload-prompt">
@@ -18,18 +54,36 @@
                         </div>
                         <div class="upload-hint">
                             Formats acceptés : .xlsx, .xls<br>
-                            En-têtes attendus à la ligne 3<br>
+                            En-têtes attendus à la ligne 3 ou récupérés dynamiquement<br>
                             Max : 200Mo
                         </div>
                     </div>
+
+                    <!-- Base File Information -->
                     <div id="base-file-info" class="file-info" style="display: none;">
                         <h4>Fichier sélectionné</h4>
                         <div id="base-file-details"></div>
                     </div>
+
+                    <!-- Base File Preview -->
+                    <div id="base-file-preview" class="file-preview" style="display: none;">
+                        <div class="preview-controls">
+                            <label for="base-sheet-select">Feuille à prévisualiser :</label>
+                            <select id="base-sheet-select" onchange="uploadManager.onBaseSheetChange()">
+                                <option value="">Sélectionner une feuille...</option>
+                            </select>
+                            <button type="button" class="btn secondary-btn" id="toggle-base-preview" onclick="uploadManager.toggleBasePreview()">
+                                Afficher l'aperçu
+                            </button>
+                        </div>
+                        <div id="base-preview-content" class="preview-content" style="display: none;">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        
+
+        <!-- Comparison Files Section -->
         <div class="upload-section">
             <div class="card">
                 <div class="card-header">📊 Fichiers de Comparaison</div>
@@ -42,24 +96,54 @@
                         </div>
                         <div class="upload-hint">
                             Formats acceptés : .xlsx, .xls<br>
-                            En-têtes attendus à la ligne 8<br>
+                            En-têtes attendus à la ligne 8 ou récupérés dynamiquement<br>
                             Plusieurs fichiers autorisés<br>
                             Max : 200Mo au total
                         </div>
                     </div>
+
+                    <!-- Comparison Files Information -->
                     <div id="comp-files-info" class="file-info" style="display: none;">
                         <h4>Fichiers sélectionnés</h4>
                         <div id="comp-files-list"></div>
+                    </div>
+                    
+                    <!-- Comparison Files Preview -->
+                    <div id="comp-files-preview" class="file-preview" style="display: none;">
+                        <div class="preview-controls">
+                            <label for="comp-sheet-select">Feuille à prévisualiser :</label>
+                            <select id="comp-sheet-select" onchange="uploadManager.onCompSheetChange()">
+                                <option value="">Sélectionner une feuille...</option>
+                            </select>
+                            <button type="button" class="btn secondary-btn" id="toggle-comp-preview" onclick="uploadManager.toggleCompareFilePreview()">
+                                Afficher l'aperçu
+                            </button>
+                        </div>
+                        <div id="comp-preview-content" class="preview-content" style="display: none;"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="comparison-config">
+    <!-- Comparison Configuration -->
+    <div id="comparison-config" class="comparison-config" style="display: none;">
         <div class="card">
             <div class="card-header">⚙️ Configuration de la Comparaison</div>
             <div class="card-body">
+
+                <!-- Select sheets to compare -->
+                <div class="config-section">
+                    <label>Feuilles à comparer :</label>
+                    <div id="selected-sheets-checkboxes" class="sheets-checkbox-group">
+                        <!-- Les cases à cocher seront ajoutées dynamiquement -->
+                    </div>
+                    <div class="help-text">
+                        Cochez une ou plusieurs feuilles à comparer
+                    </div>
+                </div>
+
+                <!-- Comparison mode -->
                 <div class="config-section">
                     <label for="comparison-mode">Mode de comparaison :</label>
                     <select id="comparison-mode">
@@ -71,16 +155,30 @@
                         Choisissez le niveau de détail pour l'analyse
                     </div>
                 </div>
-                
+
+                <!-- Header detection options -->
+                <div class="config-section">
+                    <label>Détection des en-têtes :</label>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="dynamic-header-detection" name="dynamic-header-detection" checked>
+                        <label for="dynamic-header-detection">Détection automatique des en-têtes</label>
+                    </div>
+                    <div class="help-text">
+                        Laissez coché pour que l'application détecte automatiquement les lignes d'en-tête. 
+                        Décochez pour utiliser les positions par défaut (ligne 3 pour PREPA PHP, ligne 8 pour les autres).
+                    </div>
+                </div>
+
+                <!-- Sites matching -->
                 <div class="config-section">
                     <label>Correspondances des sites :</label>
                     <div class="site-mapping">
                         <div class="mapping-input">
-                            <input type="text" id="site-code" placeholder="Code site (ex: LE)">
-                            <select id="sheet-name">
+                            <input type="text" id="new-site-code" placeholder="Code site (ex: LE)" maxlength="10">
+                            <select id="new-sheet-mapping">
                                 <option value="">Sélectionner une feuille...</option>
                             </select>
-                            <button type="button" class="btn secondary-btn" id="add-mapping-btn">Ajouter</button>
+                            <button type="button" class="btn secondary-btn" id="add-mapping">Ajouter</button>
                         </div>
                         <div class="mappings-display">
                             <div id="mappings-list">
@@ -89,9 +187,10 @@
                         </div>
                     </div>
                 </div>
-                
+
+                <!-- Actions configuration -->
                 <div class="config-actions">
-                    <button class="btn primary-btn" id="start-comparison-btn" disabled>
+                    <button class="btn primary-btn" id="start-comparison-btn">
                         🚀 Démarrer la Comparaison
                     </button>
                     <button class="btn secondary-btn" id="reset-config-btn">

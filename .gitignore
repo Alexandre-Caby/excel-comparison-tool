@@ -1,0 +1,11 @@
+src/backend/reports/
+src/backend/temp/
+src/backend/app.log
+
+src/core/__pycache__/*
+src/models/__pycache__/*
+src/utils/__pycache__/*
+
+*.bat
+*.exe
+.vscode/*

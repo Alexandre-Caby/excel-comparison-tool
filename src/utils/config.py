@@ -1,6 +1,8 @@
 import os
 import json
-import logging
+import pandas as pd
+import numpy as np
+from datetime import datetime, date, time as dt_time
 from typing import Dict, Any, Optional
 
 class Config:
@@ -8,7 +10,7 @@ class Config:
     
     DEFAULT_CONFIG = {
         "app_name": "Excel Comparison Tool",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "temp_dir": "src/backend/temp",
         "reports_dir": "src/backend/reports",
         "max_file_size_mb": 100,
@@ -111,6 +113,28 @@ class Config:
         images_dir = self.get("frontend.images_dir", "src/frontend/images")
         if not os.path.exists(images_dir):
             os.makedirs(images_dir, exist_ok=True)
+
+    @staticmethod
+    def safe_convert(obj):
+        if isinstance(obj, (np.integer, int)):
+            return int(obj)
+        if isinstance(obj, (np.floating, float)):
+            return float(obj)
+        if isinstance(obj, (np.ndarray, list)):
+            return [Config.safe_convert(x) for x in obj]
+        if isinstance(obj, dict):
+            return {k: Config.safe_convert(v) for k, v in obj.items()}
+        if isinstance(obj, (pd.Timestamp, datetime, date, dt_time)):
+            return str(obj)
+        # Catch NaT, NaN, None
+        if obj is pd.NaT or obj is None:
+            return ""
+        try:
+            if pd.isna(obj):
+                return ""
+        except Exception:
+            pass
+        return obj
 
 # Global config instance
 config = Config()

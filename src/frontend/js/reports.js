@@ -16,7 +16,8 @@ class ReportsManager {
             const result = await api.getReports();
             if (result.reports) {
                 this.reports = result.reports;
-                this.displayReports();
+                this.populateReportSelect();
+                this.hideNoReportsMessage();
             } else {
                 this.showNoReportsMessage();
             }
@@ -26,81 +27,69 @@ class ReportsManager {
         }
     }
     
-    displayReports() {
-        const content = document.getElementById('reports-content');
-        
+    populateReportSelect() {
+        const select = document.getElementById('report-select');
+        if (!select) return;
+
+        select.innerHTML = '<option value="">Sélectionner un rapport...</option>';
+
+        this.reports.forEach(report => {
+            const files = report.comparison_files || [];
+            let displayFiles = files.slice(0, 2).join(', ');
+            if (files.length > 2) {
+                displayFiles += ` ... (+${files.length - 2} autres)`;
+            }
+            const option = document.createElement('option');
+            option.value = report.id;
+            option.textContent = `${report.id} - ${report.base_file} vs ${displayFiles} (${report.date})`;
+            select.appendChild(option);
+        });
+
         if (this.reports.length === 0) {
-            this.showNoReportsMessage();
-            return;
+            const option = document.createElement('option');
+            option.textContent = 'Aucun rapport disponible';
+            option.disabled = true;
+            select.appendChild(option);
         }
-        
-        let html = `
-            <h2>Rapports disponibles</h2>
-            <div class="reports-table-container">
-                ${this.createReportsTable()}
-            </div>
-            
-            <div class="report-selector">
-                <label for="report-select">Sélectionnez un rapport à visualiser ou exporter:</label>
-                <select id="report-select">
-                    <option value="">-- Sélectionner un rapport --</option>
-                    ${this.reports.map(report => 
-                        `<option value="${report.id}">${report.id} - ${report.base_file} vs ${report.comparison_file}</option>`
-                    ).join('')}
-                </select>
-            </div>
-            
-            <div id="report-details" class="report-details" style="display: none;">
-                <!-- Report details will be populated here -->
-            </div>
-        `;
-        
-        content.innerHTML = html;
-    }
-    
-    createReportsTable() {
-        const columns = ['ID', 'Date', 'Fichier de base', 'Fichiers de comparaison', 'Différences', 'Taux de correspondance'];
-        const data = this.reports.map(report => ({
-            'ID': report.id,
-            'Date': report.date,
-            'Fichier de base': report.base_file,
-            'Fichiers de comparaison': report.comparison_file || report.comparison_files?.join(', ') || '',
-            'Différences': report.differences,
-            'Taux de correspondance': report.match_rate
-        }));
-        
-        return utils.createTable(data, columns, 'data-table reports-table');
     }
     
     showNoReportsMessage() {
-        const content = document.getElementById('reports-content');
-        content.innerHTML = `
-            <div class="info-box">
-                <h3>Aucun rapport disponible</h3>
-                <p>Effectuez une comparaison pour générer des rapports.</p>
-                <button class="btn primary-btn" onclick="app.navigateToPage('upload')">
-                    Aller à la page de téléchargement
-                </button>
-            </div>
-        `;
+        const noReportsDiv = document.getElementById('no-reports');
+        const reportContent = document.getElementById('report-content');
+        
+        if (noReportsDiv) noReportsDiv.style.display = 'block';
+        if (reportContent) reportContent.style.display = 'none';
+    }
+    
+    hideNoReportsMessage() {
+        const noReportsDiv = document.getElementById('no-reports');
+        if (noReportsDiv) noReportsDiv.style.display = 'none';
     }
     
     setupEventListeners() {
-        // Report selector change
+        // Report selector change - enable/disable load button
         document.addEventListener('change', (e) => {
             if (e.target.id === 'report-select') {
-                const reportId = e.target.value;
-                if (reportId) {
-                    this.selectReport(reportId);
-                } else {
-                    this.hideReportDetails();
+                const loadBtn = document.getElementById('load-report-btn');
+                if (loadBtn) {
+                    loadBtn.disabled = !e.target.value;
+                }
+            }
+        });
+        
+        // Load report button
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'load-report-btn') {
+                const select = document.getElementById('report-select');
+                if (select && select.value) {
+                    this.selectReport(select.value);
                 }
             }
         });
         
         // Export format change
         document.addEventListener('change', (e) => {
-            if (e.target.id === 'export-format') {
+            if (e.target.name === 'export-format') {
                 this.updateFileName();
             }
         });
@@ -114,81 +103,152 @@ class ReportsManager {
     }
     
     selectReport(reportId) {
+        // console.log('Selecting report:', reportId);
+        
         this.selectedReport = this.reports.find(r => r.id === reportId);
         if (this.selectedReport) {
+            // console.log('Selected report data:', this.selectedReport);
             this.displayReportDetails();
+            this.showReportContent();
+        } else {
+            // console.error('Report not found:', reportId);
+            app.showNotification('Rapport non trouvé', 'error');
+        }
+    }
+    
+    showReportContent() {
+        const reportContent = document.getElementById('report-content');
+        if (reportContent) {
+            reportContent.style.display = 'block';
         }
     }
     
     displayReportDetails() {
-        const detailsDiv = document.getElementById('report-details');
-        if (!detailsDiv || !this.selectedReport) return;
+        if (!this.selectedReport) {
+            // console.error('No report selected');
+            return;
+        }
         
-        const compFiles = this.selectedReport.comparison_files || 
-                         (this.selectedReport.comparison_file ? this.selectedReport.comparison_file.split(', ') : []);
+        // Update summary metrics
+        this.updateSummaryMetrics();
         
-        detailsDiv.innerHTML = `
-            <h3>Détails du rapport</h3>
-            
-            <div class="report-summary">
-                <h4>Résumé</h4>
-                <div class="summary-metrics">
-                    <div class="metric-card">
-                        <div class="metric-value">${this.selectedReport.differences}</div>
-                        <div class="metric-label">Différences trouvées</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value">${this.selectedReport.match_rate}</div>
-                        <div class="metric-label">Taux de correspondance</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value">${compFiles.length}</div>
-                        <div class="metric-label">Fichiers de comparaison</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value">${this.selectedReport.date}</div>
-                        <div class="metric-label">Généré le</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="export-section">
-                <h4>Exporter le rapport</h4>
-                <div class="export-controls">
-                    <div class="export-format">
-                        <label>Format d'exportation:</label>
-                        <div class="radio-group">
-                            <label>
-                                <input type="radio" name="export-format" value="excel" id="export-format" checked>
-                                Excel (.xlsx)
-                            </label>
-                            <label>
-                                <input type="radio" name="export-format" value="csv">
-                                CSV (.csv)
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div class="filename-input">
-                        <label for="export-filename">Nom du fichier:</label>
-                        <input type="text" id="export-filename" 
-                               value="ECT_Technis_Report_${this.selectedReport.id}_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.xlsx">
-                    </div>
-                    
-                    <button class="btn primary-btn" id="export-report-btn">
-                        Exporter
-                    </button>
-                </div>
-            </div>
-        `;
+        // Update detailed table
+        this.updateDetailedTable();
         
-        detailsDiv.style.display = 'block';
+        // Update export filename
+        this.updateFileName();
     }
     
-    hideReportDetails() {
-        const detailsDiv = document.getElementById('report-details');
-        if (detailsDiv) {
-            detailsDiv.style.display = 'none';
+    updateSummaryMetrics() {
+        const report = this.selectedReport;
+        
+        // Update metric values
+        const elements = {
+            'report-sheets': report.sheets_compared || report.sheets || this.getSheetCount(report),
+            'report-differences': report.differences || report.total_differences || '0',
+            'report-duplicates': report.duplicates || report.total_duplicates || '0', 
+            'report-date': this.formatDate(report.date) || '-'
+        };
+        
+        Object.keys(elements).forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = elements[id];
+                // console.log(`Updated ${id}:`, elements[id]);
+            }
+        });
+    }
+    
+    getSheetCount(report) {
+        // Try to determine sheet count from various possible properties
+        if (report.comparison_files) {
+            return report.comparison_files.length + 1; // +1 for base file
+        }
+        if (report.comparison_file) {
+            return report.comparison_file.includes(',') ? 
+                   report.comparison_file.split(',').length + 1 : 2;
+        }
+        return 1;
+    }
+    
+    updateDetailedTable() {
+        const tableContent = document.getElementById('report-table-content');
+        const detailedSection = document.getElementById('detailed-data-section');
+        const summaryTable = document.getElementById('report-summary-table');
+        const report = this.selectedReport;
+
+        // Determine comparison mode (default to 'full' if not present)
+        const mode = report.comparison_mode || 'full';
+
+        let html = '';
+        let hasDetails = false;
+
+        // Show differences if mode is 'full' or 'differences-only'
+        if ((mode === 'full' || mode === 'differences-only') &&
+            report.details && Array.isArray(report.details) && report.details.length > 0) {
+            hasDetails = true;
+            const columns = report.columns || this.getDefaultColumns(report.details[0]);
+            html += `<h4>Différences</h4>`;
+            html += utils.createTable(report.details, columns, 'data-table report-details-table');
+        }
+
+        if (mode === 'full' &&
+            report.duplicates_details && Array.isArray(report.duplicates_details) && report.duplicates_details.length > 0) {
+            hasDetails = true;
+            const dupColumns = report.duplicates_columns || this.getDefaultColumns(report.duplicates_details[0]);
+            html += `<h4>Doublons détectés</h4>`;
+            html += utils.createTable(report.duplicates_details, dupColumns, 'data-table report-duplicates-table');
+        }
+
+        if (hasDetails) {
+            if (detailedSection) detailedSection.style.display = 'block';
+            if (summaryTable) summaryTable.innerHTML = '';
+            if (tableContent) tableContent.innerHTML = html;
+        } else {
+            if (detailedSection) detailedSection.style.display = 'none';
+            if (summaryTable) summaryTable.innerHTML = this.createSummaryTable(report);
+        }
+    }
+        
+    getDefaultColumns(dataRow) {
+        if (!dataRow || typeof dataRow !== 'object') {
+            return ['Information', 'Valeur'];
+        }
+        return Object.keys(dataRow);
+    }
+    
+    createSummaryTable(report) {
+        let files = report.comparison_files || [];
+        let displayFiles = files.slice(0, 2).join(', ');
+        if (files.length > 2) {
+            displayFiles += ` ... (+${files.length - 2} autres)`;
+        }
+        const summaryInfo = [
+            { 'Information': 'ID du rapport', 'Valeur': report.id },
+            { 'Information': 'Fichier de base', 'Valeur': report.base_file || '-' },
+            { 'Information': 'Fichier(s) de comparaison', 'Valeur': displayFiles || '-' },
+            { 'Information': 'Différences trouvées', 'Valeur': report.differences || '0' },
+            { 'Information': 'Doublons détectés', 'Valeur': report.duplicates || '0' },
+            { 'Information': 'Taux de correspondance', 'Valeur': report.match_rate || '-' },
+            { 'Information': 'Date de génération', 'Valeur': report.date || '-' }
+        ];
+        return utils.createTable(summaryInfo, ['Information', 'Valeur'], 'data-table summary-table');
+    }
+    
+    formatDate(dateString) {
+        if (!dateString) return null;
+        
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('fr-FR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (error) {
+            return dateString; // Return original if parsing fails
         }
     }
     
@@ -199,9 +259,23 @@ class ReportsManager {
         if (!filenameInput || !this.selectedReport) return;
         
         const selectedFormat = Array.from(formatRadios).find(r => r.checked)?.value || 'excel';
-        const extension = selectedFormat === 'excel' ? 'xlsx' : 'csv';
-        const baseName = `ECT_Technis_Report_${this.selectedReport.id}_${new Date().toISOString().slice(0,10).replace(/-/g,'')}`;
+        let extension;
         
+        switch(selectedFormat) {
+            case 'excel':
+                extension = 'xlsx';
+                break;
+            case 'csv':
+                extension = 'csv';
+                break;
+            case 'pdf':
+                extension = 'pdf';
+                break;
+            default:
+                extension = 'xlsx';
+        }
+        
+        const baseName = `ECT_Technis_Report_${this.selectedReport.id}_${new Date().toISOString().slice(0,10).replace(/-/g,'')}`;
         filenameInput.value = `${baseName}.${extension}`;
     }
     
@@ -213,16 +287,45 @@ class ReportsManager {
         
         const formatRadios = document.querySelectorAll('input[name="export-format"]');
         const selectedFormat = Array.from(formatRadios).find(r => r.checked)?.value || 'excel';
+        const filenameInput = document.getElementById('export-filename');
+        const desiredFilename = filenameInput ? filenameInput.value : '';
         
         try {
-            app.showLoading(true);
+            let loadingMessage = 'Export en cours...';
+            switch(selectedFormat) {
+                case 'excel':
+                    loadingMessage = 'Génération du fichier Excel...';
+                    break;
+                case 'csv':
+                    loadingMessage = 'Génération du fichier CSV...';
+                    break;
+                case 'pdf':
+                    loadingMessage = 'Génération du fichier PDF...';
+                    break;
+            }
             
-            await api.exportReport(this.selectedReport.id, selectedFormat);
-            app.showNotification('Rapport exporté avec succès', 'success');
+            app.showLoading(true, loadingMessage);
+            
+            await api.exportReport(this.selectedReport.id, selectedFormat, desiredFilename);
+            
+            let successMessage = 'Rapport exporté avec succès';
+            switch(selectedFormat) {
+                case 'excel':
+                    successMessage = 'Rapport Excel exporté avec succès';
+                    break;
+                case 'csv':
+                    successMessage = 'Rapport CSV exporté avec succès';
+                    break;
+                case 'pdf':
+                    successMessage = 'Rapport PDF exporté avec succès';
+                    break;
+            }
+            
+            app.showNotification(successMessage, 'success');
             
         } catch (error) {
             console.error('Error exporting report:', error);
-            app.showNotification('Erreur lors de l\'exportation du rapport', 'error');
+            app.showNotification(`Erreur lors de l'exportation du rapport ${selectedFormat.toUpperCase()}`, 'error');
         } finally {
             app.showLoading(false);
         }

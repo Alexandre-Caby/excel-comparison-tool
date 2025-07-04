@@ -37,32 +37,35 @@ class Utils {
     }
     
     // Create HTML table from data
-    static createTable(data, columns, className = 'data-table') {
+    static createTable(data, columns, className = 'data-table', translations = {}) {
         if (!data || data.length === 0) {
             return '<p class="no-data">Aucune donnée disponible</p>';
         }
-        
-        let html = `<table class="${className}">`;
-        
+        let html = `<div class="table-scroll-wrapper"><table class="${className}">`;
         // Headers
         html += '<thead><tr>';
         columns.forEach(col => {
-            html += `<th>${col}</th>`;
+            html += `<th>${translations[col] || col}</th>`;
         });
         html += '</tr></thead>';
-        
         // Body
         html += '<tbody>';
         data.forEach(row => {
             html += '<tr>';
             columns.forEach(col => {
-                const value = row[col] || '';
+                let value = row[col];
+                if (
+                    value === null ||
+                    value === undefined ||
+                    value === "NaT" ||
+                    value === "nan" ||
+                    value === "NaN"
+                ) value = "";
                 html += `<td>${this.escapeHtml(value)}</td>`;
             });
             html += '</tr>';
         });
-        html += '</tbody></table>';
-        
+        html += '</tbody></table></div>';
         return html;
     }
     
