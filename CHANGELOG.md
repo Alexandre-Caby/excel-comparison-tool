@@ -1,5 +1,12 @@
 # Excel Comparison Tool - Changelog
 
+## Version 1.1.1
+
+### Bug Fixes
+- Fix not found files when launching the app
+- Add logging
+- Add verification for production mode
+
 ## Version 1.1.0
 
 ### New Features

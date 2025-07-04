@@ -194,7 +194,7 @@ function startPythonServer() {
     pythonProcess = spawn(pythonExecutable, [pythonScript], {
       cwd: workingDir,
       env: { ...process.env, PYTHONUNBUFFERED: '1' },
-      windowsHide: false // Show console for debugging
+      windowsHide: true // Hide console for debugging
     });
 
     console.log(`Python PID: ${pythonProcess.pid}`);
