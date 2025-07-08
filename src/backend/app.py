@@ -31,9 +31,9 @@ if getattr(sys, 'frozen', False):
     # Try to import from the bundle with fallbacks
     try:
         from config import config, Config
-        print("✓ Imported config")
+        print("[OK] Imported config")
     except ImportError:
-        print("✗ config not found, using defaults")
+        print("[ERROR] config not found, using defaults")
         # Create minimal config fallback
         config = {'max_file_size_mb': 200}
         class Config:
@@ -43,9 +43,9 @@ if getattr(sys, 'frozen', False):
     
     try:
         from comparison_engine import ComparisonEngine
-        print("✓ Imported ComparisonEngine")
+        print("[OK] Imported ComparisonEngine")
     except ImportError:
-        print("✗ ComparisonEngine not found")
+        print("[ERROR] ComparisonEngine not found")
         class ComparisonEngine:
             @staticmethod
             def run_comparison(session_data, excel_processor, safe_convert):
@@ -53,9 +53,9 @@ if getattr(sys, 'frozen', False):
     
     try:
         from excel_processor import ExcelProcessor
-        print("✓ Imported ExcelProcessor")
+        print("[OK] Imported ExcelProcessor")
     except ImportError:
-        print("✗ ExcelProcessor not found")
+        print("[ERROR] ExcelProcessor not found")
         class ExcelProcessor:
             def __init__(self, filepath):
                 self.filepath = filepath
@@ -68,17 +68,17 @@ if getattr(sys, 'frozen', False):
     
     try:
         from site_matcher import SiteMatcher
-        print("✓ Imported SiteMatcher")
+        print("[OK] Imported SiteMatcher")
     except ImportError:
-        print("✗ SiteMatcher not found")
+        print("[ERROR] SiteMatcher not found")
         class SiteMatcher:
             pass
     
     try:
         from data_models import FileInfo, ComparisonSummary
-        print("✓ Imported data_models")
+        print("[OK] Imported data_models")
     except ImportError:
-        print("✗ data_models not found")
+        print("[ERROR] data_models not found")
         class FileInfo:
             def __init__(self, file_name, sheet_names):
                 self.file_name = file_name
@@ -93,9 +93,9 @@ if getattr(sys, 'frozen', False):
     
     try:
         from report_generating import ReportGenerator
-        print("✓ Imported ReportGenerator")
+        print("[OK] Imported ReportGenerator")
     except ImportError:
-        print("✗ ReportGenerator not found")
+        print("[ERROR] ReportGenerator not found")
         class ReportGenerator:
             @staticmethod
             def generate_excel_report_temp(report, session_data, temp_dir):
