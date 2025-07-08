@@ -160,21 +160,35 @@ def is_packaged_app():
 
 app.isPackaged = is_packaged_app()
 
-# Serve frontend files
-@app.route('/')
-def serve_frontend():
-    return send_from_directory(frontend_dir, 'index.html')
+# # Serve frontend files
+# @app.route('/')
+# def serve_frontend():
+#     if getattr(sys, 'frozen', False):
+#         return jsonify({
+#             "status": "ECT Technis Backend Running", 
+#             "message": "Backend is operational",
+#             "frontend": "Use Electron app interface"
+#         })
+#     else:
+#         return send_from_directory(frontend_dir, 'index.html')
 
-@app.route('/<path:filename>')
-def serve_static(filename):
-    try:
-        return send_from_directory(frontend_dir, filename)
-    except FileNotFoundError:
-        return jsonify({'error': 'File not found'}), 404
+# @app.route('/<path:filename>')
+# def serve_static(filename):
+#     if getattr(sys, 'frozen', False):
+#         return jsonify({'error': 'Static files not available in packaged mode'}), 404
+#     else:
+#         try:
+#             return send_from_directory(frontend_dir, filename)
+#         except FileNotFoundError:
+#             return jsonify({'error': 'File not found'}), 404
 
 @app.route('/health')
 def health_check():
-    return jsonify({"status": "ok", "message": "Backend is running"})
+    return jsonify({
+        "status": "ok", 
+        "message": "ECT Technis Backend is running",
+        "mode": "PyInstaller" if getattr(sys, 'frozen', False) else "Development"
+    })
 
 @app.route('/api/upload-base-file', methods=['POST'])
 def upload_base_file():
@@ -555,6 +569,10 @@ def main():
         print(f"Error parsing arguments: {e}")
         args = parser.parse_args([])  # Use empty args as fallback
 
+    if getattr(sys, 'frozen', False):
+        logging.getLogger('werkzeug').setLevel(logging.ERROR)
+
+    print(f"Starting Flask server on port {args.port}")
     app.run(
         host='127.0.0.1',
         port=args.port,
