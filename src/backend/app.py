@@ -149,8 +149,8 @@ else:
 
 # Configuration - Use backend temp directory
 if getattr(sys, 'frozen', False):
-    # PyInstaller mode - use a writable temp directory
-    temp_dir = os.path.join(tempfile.gettempdir(), 'ect_technis_temp')
+    app_data_path = os.environ.get('APPDATA', os.path.expanduser('~'))
+    temp_dir = os.path.join(app_data_path, 'ECT_Technis', 'temp_uploads')
 else:
     # Development mode
     temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp')
@@ -204,7 +204,8 @@ def debug_info():
 
 @app.route('/api/upload-base-file', methods=['POST'])
 def upload_base_file():
-    logger.info("Starting base file upload")
+    logger.info("Received request to upload base file.")
+    logger.info(f"Attempting to save to: {app.config['UPLOAD_FOLDER']}")
     try:
         if 'file' not in request.files:
             logger.warning("No file provided in upload request")
@@ -533,18 +534,13 @@ def export_report():
 def serve_docs(filename):
     """Serve documentation files from docs directory"""
     if getattr(sys, 'frozen', False):
-        resources_dir = os.path.dirname(sys.executable)
-        while os.path.basename(resources_dir) != 'resources' and resources_dir != os.path.dirname(resources_dir):
-            resources_dir = os.path.dirname(resources_dir)
-        
-        docs_dir = os.path.join(resources_dir, 'docs')
-        logger.info(f"PyInstaller mode - looking for docs in: {docs_dir}")
+        base_path = os.path.dirname(sys.executable)
+        docs_dir = os.path.abspath(os.path.join(base_path, '..', 'docs'))
     else:
         # Development mode
         docs_dir = os.path.join(project_root, 'docs')
-        logger.info(f"Development mode - looking for docs in: {docs_dir}")
     
-    logger.info(f"Requested file: {filename}")
+    logger.info(f"Serving docs from: {docs_dir}")
     
     if not os.path.exists(docs_dir):
         logger.error(f"Docs directory not found: {docs_dir}")
@@ -553,29 +549,25 @@ def serve_docs(filename):
     try:
         return send_from_directory(docs_dir, filename)
     except FileNotFoundError:
-        logger.error(f"Documentation file not found: {filename}")
+        logger.error(f"Documentation file not found: {filename} in {docs_dir}")
         return jsonify({'error': 'Documentation file not found'}), 404
 
 @app.route('/docs/legal/<path:filename>')
 def serve_legal_docs(filename):
     """Serve legal documentation files"""
     if getattr(sys, 'frozen', False):
-        resources_dir = os.path.dirname(sys.executable)
-        while os.path.basename(resources_dir) != 'resources' and resources_dir != os.path.dirname(resources_dir):
-            resources_dir = os.path.dirname(resources_dir)
-        
-        legal_docs_dir = os.path.join(resources_dir, 'docs', 'legal')
+        base_path = os.path.dirname(sys.executable)
+        legal_docs_dir = os.path.abspath(os.path.join(base_path, '..', 'docs', 'legal'))
     else:
         # Development mode
         legal_docs_dir = os.path.join(project_root, 'docs', 'legal')
     
-    logger.info(f"Looking for legal docs in: {legal_docs_dir}")
-    logger.info(f"Requested legal file: {filename}")
+    logger.info(f"Serving legal docs from: {legal_docs_dir}")
     
     try:
         return send_from_directory(legal_docs_dir, filename)
     except FileNotFoundError:
-        logger.error(f"Legal documentation file not found: {filename}")
+        logger.error(f"Legal documentation file not found: {filename} in {legal_docs_dir}")
         return jsonify({'error': 'Legal document not found'}), 404
 
 @app.route('/shutdown', methods=['POST'])
