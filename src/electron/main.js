@@ -93,7 +93,7 @@ function createWindow() {
   setTimeout(() => {
     waitForBackend().then((port) => {
       console.log(`Backend ready on port ${port}, reloading UI`);
-      mainWindow.loadURL(`http://localhost:${port}`);
+      mainWindow.loadURL(`http://localhost:${port}/health`);
     }).catch((error) => {
       console.error('Backend failed to start:', error);
       mainWindow.webContents.executeJavaScript(`
