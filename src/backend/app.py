@@ -621,7 +621,7 @@ def main():
     app.run(
         host='127.0.0.1',
         port=args.port,
-        debug=False,
+        debug=True,
         use_reloader=False,
         threaded=True
     )
