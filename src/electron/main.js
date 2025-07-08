@@ -267,7 +267,7 @@ function showBackendError(message) {
                 <li>Reinstall the application if the problem persists</li>
               </ul>
             </div>
-            <button onclick="require('electron').remote.app.quit()" 
+            <button onclick="window.close()" 
                     style="background: #1976d2; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-size: 16px;">
               Close Application
             </button>

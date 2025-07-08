@@ -16,30 +16,129 @@ import traceback
 import logging
 import argparse
 
-# Determine project paths for development
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, project_root)
+# Handle both development and PyInstaller packaged modes
+if getattr(sys, 'frozen', False):
+    # Running as PyInstaller bundle
+    application_path = sys._MEIPASS
+    sys.path.insert(0, application_path)
+    print(f"PyInstaller mode - base path: {application_path}")
+    
+    # List what's actually available in the bundle
+    print("Available files in bundle:")
+    for item in os.listdir(application_path):
+        print(f"  {item}")
+    
+    # Try to import from the bundle with fallbacks
+    try:
+        from config import config, Config
+        print("✓ Imported config")
+    except ImportError:
+        print("✗ config not found, using defaults")
+        # Create minimal config fallback
+        config = {'max_file_size_mb': 200}
+        class Config:
+            @staticmethod
+            def safe_convert(data):
+                return data
+    
+    try:
+        from comparison_engine import ComparisonEngine
+        print("✓ Imported ComparisonEngine")
+    except ImportError:
+        print("✗ ComparisonEngine not found")
+        class ComparisonEngine:
+            @staticmethod
+            def run_comparison(session_data, excel_processor, safe_convert):
+                return {"error": "ComparisonEngine not available"}
+    
+    try:
+        from excel_processor import ExcelProcessor
+        print("✓ Imported ExcelProcessor")
+    except ImportError:
+        print("✗ ExcelProcessor not found")
+        class ExcelProcessor:
+            def __init__(self, filepath):
+                self.filepath = filepath
+                self.sheet_names = []
+            def load_workbook(self):
+                return False
+            def get_sheet_data(self, sheet_name, is_base_file=False):
+                import pandas as pd
+                return pd.DataFrame()
+    
+    try:
+        from site_matcher import SiteMatcher
+        print("✓ Imported SiteMatcher")
+    except ImportError:
+        print("✗ SiteMatcher not found")
+        class SiteMatcher:
+            pass
+    
+    try:
+        from data_models import FileInfo, ComparisonSummary
+        print("✓ Imported data_models")
+    except ImportError:
+        print("✗ data_models not found")
+        class FileInfo:
+            def __init__(self, file_name, sheet_names):
+                self.file_name = file_name
+                self.sheet_names = sheet_names
+            @classmethod
+            def from_path(cls, filepath, sheet_names):
+                import os
+                return cls(os.path.basename(filepath), sheet_names)
+        
+        class ComparisonSummary:
+            pass
+    
+    try:
+        from report_generating import ReportGenerator
+        print("✓ Imported ReportGenerator")
+    except ImportError:
+        print("✗ ReportGenerator not found")
+        class ReportGenerator:
+            @staticmethod
+            def generate_excel_report_temp(report, session_data, temp_dir):
+                return None
+            @staticmethod
+            def generate_csv_report_temp(report, session_data, temp_dir):
+                return None
+            @staticmethod
+            def generate_pdf_report_temp(report, session_data, temp_dir):
+                return None
 
-# Import application modules
-from src.utils.config import config, Config
-from src.core.comparison_engine import ComparisonEngine
-from src.core.excel_processor import ExcelProcessor
-from src.core.site_matcher import SiteMatcher
-from src.models.data_models import FileInfo, ComparisonSummary
-from src.core.report_generating import ReportGenerator
+else:
+    # Development mode - your original code
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    sys.path.insert(0, project_root)
+    print(f"Development mode - project root: {project_root}")
+    
+    # Import application modules
+    from src.utils.config import config, Config
+    from src.core.comparison_engine import ComparisonEngine
+    from src.core.excel_processor import ExcelProcessor
+    from src.core.site_matcher import SiteMatcher
+    from src.models.data_models import FileInfo, ComparisonSummary
+    from src.core.report_generating import ReportGenerator
 
 safe_convert = Config.safe_convert
 
 app = Flask(__name__)
 CORS(app)
 
+# Handle paths for both development and PyInstaller modes
+if getattr(sys, 'frozen', False):
+    # PyInstaller mode
+    project_root = os.path.dirname(sys.executable)
+    frontend_dir = None  # Not used in PyInstaller mode
+else:
+    # project_root is already defined in development mode
+    frontend_dir = os.path.join(project_root, 'src', 'frontend')
+
 # Configuration - Use backend temp directory
 temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp')
 app.config['UPLOAD_FOLDER'] = temp_dir
 app.config['MAX_CONTENT_LENGTH'] = config.get('max_file_size_mb', 200) * 1024 * 1024
-
-# Frontend directory for serving static files
-frontend_dir = os.path.join(project_root, 'src', 'frontend')
 
 # Ensure temp directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -444,14 +543,6 @@ def cleanup_and_shutdown():
         func()
     else:
         os._exit(0)
-        
-def is_packaged_app():
-    """Detect if running in packaged mode"""
-    # Check if we're running from a temp directory (typical for Electron apps)
-    app_path = os.path.abspath(__file__)
-    return 'Temp' in app_path and 'resources' in app_path
-
-app.isPackaged = is_packaged_app()
 
 def main():
     parser = argparse.ArgumentParser(description='ECT Technis Backend Server')
