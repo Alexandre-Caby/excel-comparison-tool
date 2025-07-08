@@ -186,17 +186,21 @@ jobs:
           exit 1
         }
         
-        # Run PyInstaller with simpler command line
+        # Run PyInstaller
         Write-Host "Running PyInstaller..."
         pyinstaller --onefile --windowed --name=ect-backend --distpath=dist/backend --workpath=build/pyinstaller `
         src/backend/app.py `
-        --add-data "src/core;core" `
-        --add-data "src/utils;utils" `
-        --add-data "src/models;models" `
+        --add-data "src/utils/config.py;." `
+        --add-data "src/core/comparison_engine.py;." `
+        --add-data "src/core/excel_processor.py;." `
+        --add-data "src/core/site_matcher.py;." `
+        --add-data "src/core/report_generating.py;." `
+        --add-data "src/models/data_models.py;." `
         --hidden-import=flask `
         --hidden-import=flask_cors `
         --hidden-import=pandas `
         --hidden-import=openpyxl `
+        --hidden-import=xlsxwriter `
         --hidden-import=reportlab `
         --hidden-import=rapidfuzz
         
