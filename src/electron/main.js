@@ -156,7 +156,7 @@ function startPythonServer() {
     console.log('Checking for backend executable:');
     for (const testPath of possibleExecutablePaths) {
       const exists = fs.existsSync(testPath);
-      console.log(`  ${exists ? '✓' : '✗'} ${testPath}`);
+      console.log(`  ${exists ? '[OK]' : '[ERROR]'} ${testPath}`);
       if (exists) {
         backendExecutable = testPath;
         workingDir = path.dirname(testPath);
