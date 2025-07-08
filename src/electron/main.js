@@ -278,6 +278,37 @@ function showBackendError(message) {
   }
 }
 
+async function waitForBackend() {
+  const maxAttempts = 60; // 30 seconds (500ms * 60)
+  const delay = 500; // 500ms between attempts
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      console.log(`Attempting to connect to backend (${attempt}/${maxAttempts})...`);
+      
+      // Try to connect to Flask backend on default port
+      const response = await axios.get('http://localhost:5000/health', { 
+        timeout: 1000 
+      });
+      
+      if (response.status === 200) {
+        console.log('Backend is ready!');
+        return 5000; // Return the port number
+      }
+    } catch (error) {
+      // Silent fail - just continue trying
+      if (attempt % 10 === 0) {
+        console.log(`Still waiting for backend... (attempt ${attempt})`);
+      }
+    }
+    
+    // Wait before next attempt
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+  
+  throw new Error('Backend failed to start within 30 seconds');
+}
+
 // IPC handlers
 ipcMain.handle('select-files', async (event, options) => {
   const result = await dialog.showOpenDialog(mainWindow, {
