@@ -5,5 +5,5 @@ xlsxwriter==3.1.4
 numpy==1.24.3
 Werkzeug==2.3.7
 reportlab>=3.6.0
-rapidfuzz==2.0.0
+rapidfuzz>=3.0.0
 soundex==1.0.0
