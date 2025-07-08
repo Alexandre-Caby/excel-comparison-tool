@@ -93,7 +93,16 @@ function createWindow() {
   setTimeout(() => {
     waitForBackend().then((port) => {
       console.log(`Backend ready on port ${port}, reloading UI`);
-      mainWindow.loadURL(`http://localhost:${port}/health`);
+      // mainWindow.loadURL(`http://localhost:${port}`);
+      mainWindow.loadFile(path.join(__dirname, '../frontend/index.html'));
+
+      mainWindow.webContents.once('dom-ready', () => {
+          mainWindow.webContents.executeJavaScript(`
+              window.BACKEND_URL = 'http://localhost:${port}';
+              console.log('Backend URL set to:', window.BACKEND_URL);
+          `);
+      });
+
     }).catch((error) => {
       console.error('Backend failed to start:', error);
       mainWindow.webContents.executeJavaScript(`
