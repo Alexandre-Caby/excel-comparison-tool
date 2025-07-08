@@ -547,11 +547,14 @@ def cleanup_and_shutdown():
 def main():
     parser = argparse.ArgumentParser(description='ECT Technis Backend Server')
     parser.add_argument('--port', type=int, default=5000, help='Port to run the server on')
-    parser.add_argument('--help', action='help', help='Show this help message')
-    
-    args = parser.parse_args()
-    
-    # Your existing Flask app code here
+    try:
+        args, unknown = parser.parse_known_args()
+        if unknown:
+            print(f"Warning: Unknown arguments ignored: {unknown}")
+    except Exception as e:
+        print(f"Error parsing arguments: {e}")
+        args = parser.parse_args([])  # Use empty args as fallback
+
     app.run(
         host='127.0.0.1',
         port=args.port,

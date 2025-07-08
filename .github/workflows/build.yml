@@ -187,21 +187,44 @@ jobs:
         
         # Run PyInstaller
         Write-Host "Running PyInstaller..."
+
+        # Create a temporary directory to organize modules properly
+        $tempModuleDir = "temp_modules"
+        if (Test-Path $tempModuleDir) { Remove-Item $tempModuleDir -Recurse -Force }
+        New-Item -ItemType Directory -Path $tempModuleDir -Force
+
+        # Copy files with proper structure
+        Copy-Item "src/utils/config.py" "$tempModuleDir/"
+        Copy-Item "src/core/comparison_engine.py" "$tempModuleDir/"
+        Copy-Item "src/core/excel_processor.py" "$tempModuleDir/"
+        Copy-Item "src/core/site_matcher.py" "$tempModuleDir/"
+        Copy-Item "src/core/report_generating.py" "$tempModuleDir/"
+        Copy-Item "src/models/data_models.py" "$tempModuleDir/"
+
+        # Create __init__.py files to make them proper packages
+        Set-Content -Path "$tempModuleDir/__init__.py" -Value ""
+
+        # Now run PyInstaller with the organized modules
         pyinstaller --onefile --windowed --name=ect-backend --distpath=dist/backend --workpath=build/pyinstaller `
+        --paths=$tempModuleDir `
         src/backend/app.py `
-        --add-data "src/utils/config.py;." `
-        --add-data "src/core/comparison_engine.py;." `
-        --add-data "src/core/excel_processor.py;." `
-        --add-data "src/core/site_matcher.py;." `
-        --add-data "src/core/report_generating.py;." `
-        --add-data "src/models/data_models.py;." `
+        --add-data "$tempModuleDir;." `
         --hidden-import=flask `
         --hidden-import=flask_cors `
         --hidden-import=pandas `
         --hidden-import=openpyxl `
         --hidden-import=xlsxwriter `
         --hidden-import=reportlab `
-        --hidden-import=rapidfuzz
+        --hidden-import=rapidfuzz `
+        --hidden-import=config `
+        --hidden-import=comparison_engine `
+        --hidden-import=excel_processor `
+        --hidden-import=site_matcher `
+        --hidden-import=data_models `
+        --hidden-import=report_generating
+
+        # Clean up temporary directory
+        Remove-Item $tempModuleDir -Recurse -Force
         
         # Verify the executable was created
         if (Test-Path "dist/backend/ect-backend.exe") {
