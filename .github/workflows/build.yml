@@ -156,9 +156,47 @@ jobs:
         # No changes needed - keep original paths
         Write-Host "Using original package.json configuration ✓"
     
+    - name: Build Python backend with PyInstaller
+      run: |
+        Write-Host "Building Python backend executable..."
+        pip install pyinstaller
+        
+        # Create the executable
+        pyinstaller --onefile --windowed --name=ect-backend --distpath=dist/backend --workpath=build/pyinstaller --specpath=build src/backend/app.py --add-data "src/core;core" --add-data "src/utils;utils" --add-data "src/models;models" --hidden-import=flask --hidden-import=flask_cors --hidden-import=pandas --hidden-import=openpyxl --hidden-import=xlsxwriter --hidden-import=reportlab --hidden-import=rapidfuzz
+        
+        # Verify the executable was created
+        if (Test-Path "dist/backend/ect-backend.exe") {
+          Write-Host "✓ Python backend executable created successfully"
+          $backendSize = (Get-Item "dist/backend/ect-backend.exe").Length / 1MB
+          Write-Host "  Size: $([math]::Round($backendSize, 2)) MB"
+          
+          # Test the executable
+          Write-Host "Testing the executable..."
+          $testProcess = Start-Process -FilePath "dist/backend/ect-backend.exe" -ArgumentList "--help" -Wait -PassThru -WindowStyle Hidden
+          Write-Host "  Test exit code: $($testProcess.ExitCode)"
+          
+          # Create backend directory for electron-builder
+          if (!(Test-Path "resources/backend")) { 
+            New-Item -ItemType Directory -Path "resources/backend" -Force
+          }
+          
+          # Copy the executable
+          Copy-Item "dist/backend/ect-backend.exe" "resources/backend/"
+          Write-Host "✓ Backend executable copied to resources"
+        } else {
+          Write-Error "Failed to create Python backend executable"
+          exit 1
+        }
+
     - name: Build Electron app
       run: |
         Write-Host "Building Electron application..."
+        
+        # Verify backend executable exists before building
+        if (!(Test-Path "resources/backend/ect-backend.exe")) {
+          Write-Error "Backend executable not found. PyInstaller step may have failed."
+          exit 1
+        }
         
         # Build both installer and portable versions
         npx electron-builder --win --x64 --publish=never

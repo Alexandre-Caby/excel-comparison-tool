@@ -135,6 +135,11 @@ class ExcelProcessor:
             'Heure sortie': [
                 'heure sortie', 'exit time', 'completion time', 'finished time',
                 'heure de sortie', 'heure de fin', 'heure fin', 'heure de\nfin'
+            ],
+            'Semaine de programmation': [
+                'semaine de programmation', 'semaine prog', 'week', 'semaine', 'week number',
+                'numéro semaine', 'numero semaine', 'semaine de prog', 'week programming',
+                'programming week', 'semaine programmation'
             ]
         }
         # Check each column
@@ -197,18 +202,15 @@ class ExcelProcessor:
             if df.shape[1] < 2:
                 return pd.DataFrame()
                 
-            # Extract columns A-J
-            col_limit = min(10, df.shape[1])
+            # Extract columns A-K
+            col_limit = min(11, df.shape[1])
             df = df.iloc[:, :col_limit].copy()
-            
-            #print(f"After column limit ({col_limit}): {df.columns.tolist()}")
-            #print(f"DataFrame shape: {df.shape}")
             
             detected_mappings = self.detect_column_types(df.columns)
 
             standard_columns = ["Site", "Serie", "Locomotive", "CodeOp", "Commentaire", 
                                "Date Butee", "Date programmation", "Heure programmation", 
-                               "Date sortie", "Heure sortie"]
+                               "Date sortie", "Heure sortie", "Semaine de programmation"]
 
             final_column_names = []
             seen_columns = {}
