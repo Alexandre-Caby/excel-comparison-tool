@@ -391,3 +391,33 @@ body {
     background: #f8fafc;
     z-index: 2;
 }
+
+.similar-row {
+    background-color: #E3F2FD !important;
+    color: #1565C0 !important;
+}
+
+.similar-row td {
+    background-color: #E3F2FD !important;
+    color: #1565C0 !important;
+    font-style: italic;
+}
+
+.status-icon.similar {
+    color: #1565C0;
+    font-weight: bold;
+}
+
+.similarity-value {
+    background-color: #BBDEFB;
+    color: #0D47A1;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
+.week-column {
+    text-align: center;
+    font-weight: bold;
+    color: #2E7D32;
+}

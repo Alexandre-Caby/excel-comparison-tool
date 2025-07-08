@@ -114,8 +114,7 @@ function createWindow() {
 function startPythonServer() {
   console.log('=== STARTING PYTHON SERVER ===');
   
-  let pythonScript;
-  let pythonExecutable = 'python';
+  let backendExecutable;
   let workingDir;
   
   if (app.isPackaged) {
@@ -130,116 +129,153 @@ function startPythonServer() {
         const fullPath = path.join(resourcesPath, file);
         const stats = fs.statSync(fullPath);
         console.log(`  ${stats.isDirectory() ? 'DIR' : 'FILE'}: ${file}`);
+        
+        // If it's a directory, list its contents too
+        if (stats.isDirectory() && file === 'backend') {
+          try {
+            const subFiles = fs.readdirSync(fullPath);
+            subFiles.forEach(subFile => {
+              console.log(`    FILE: ${subFile}`);
+            });
+          } catch (err) {
+            console.error(`    Error listing ${file}:`, err);
+          }
+        }
       });
     } catch (err) {
       console.error('Error listing resources:', err);
     }
     
-    // Check possible Python script locations
-    const possiblePaths = [
-      path.join(resourcesPath, 'app', 'src', 'backend', 'app.py'),
-      path.join(resourcesPath, 'src', 'backend', 'app.py'),
-      path.join(resourcesPath, 'app', 'backend', 'app.py'),
-      path.join(resourcesPath, 'backend', 'app.py')
+    // Look for the backend executable
+    const possibleExecutablePaths = [
+      path.join(resourcesPath, 'backend', 'ect-backend.exe'),
+      path.join(resourcesPath, 'app', 'backend', 'ect-backend.exe'),
+      path.join(resourcesPath, 'ect-backend.exe')
     ];
     
-    console.log('Checking for Python script in possible locations:');
-    for (const testPath of possiblePaths) {
-      const exists = fs.existsSync(testPath);
-      console.log(`  ${exists ? '✓' : '✗'} ${testPath}`);
-      if (exists && !pythonScript) {
-        pythonScript = testPath;
-        workingDir = path.dirname(testPath);
-      }
-    }
-    
-    // Check for bundled Python
-    const possiblePythonPaths = [
-      path.join(resourcesPath, 'python', 'python.exe'),
-      path.join(resourcesPath, 'python', 'pythonw.exe')
-    ];
-    
-    console.log('Checking for bundled Python:');
-    for (const testPath of possiblePythonPaths) {
+    console.log('Checking for backend executable:');
+    for (const testPath of possibleExecutablePaths) {
       const exists = fs.existsSync(testPath);
       console.log(`  ${exists ? '✓' : '✗'} ${testPath}`);
       if (exists) {
-        pythonExecutable = testPath;
+        backendExecutable = testPath;
+        workingDir = path.dirname(testPath);
         break;
       }
     }
+    
+    if (!backendExecutable) {
+      console.error('CRITICAL: Backend executable not found!');
+      showBackendError('Backend executable not found. Please reinstall the application.');
+      return;
+    }
   } else {
     console.log('Running in development mode');
-    pythonScript = path.join(__dirname, '../backend/app.py');
-    workingDir = path.dirname(pythonScript);
-  }
-  
-  if (!pythonScript) {
-    console.error('CRITICAL: Python script not found!');
-    return;
-  }
-  
-  if (!fs.existsSync(pythonScript)) {
-    console.error(`CRITICAL: Python script does not exist at: ${pythonScript}`);
-    return;
-  }
-  
-  console.log(`Python executable: ${pythonExecutable}`);
-  console.log(`Python script: ${pythonScript}`);
-  console.log(`Working directory: ${workingDir}`);
-  
-  try {
-    console.log('Spawning Python process...');
-    
-    pythonProcess = spawn(pythonExecutable, [pythonScript], {
-      cwd: workingDir,
-      env: { ...process.env, PYTHONUNBUFFERED: '1' },
-      windowsHide: true // Hide console for debugging
-    });
-
-    console.log(`Python PID: ${pythonProcess.pid}`);
-    
-    pythonProcess.stdout.on('data', (data) => {
-      console.log(`Python stdout: ${data.toString().trim()}`);
-    });
-    
-    pythonProcess.stderr.on('data', (data) => {
-      console.error(`Python stderr: ${data.toString().trim()}`);
-    });
-    
-    pythonProcess.on('close', (code) => {
-      console.log(`Python process exited with code ${code}`);
-    });
-    
-    pythonProcess.on('error', (error) => {
-      console.error('Python process error:', error);
-    });
-  } catch (error) {
-    console.error('Exception starting Python process:', error);
-  }
-}
-
-async function waitForBackend(maxAttempts = 30, ports = [5000, 5001, 5002, 5003]) {
-  console.log('Waiting for backend to become available...');
-  
-  for (const port of ports) {
-    console.log(`Trying port ${port}...`);
-    let attempts = 0;
-    
-    while (attempts < maxAttempts) {
+    const pythonScript = path.join(__dirname, '../backend/app.py');
+    if (fs.existsSync(pythonScript)) {
+      console.log(`Using Python script: ${pythonScript}`);
+      workingDir = path.dirname(pythonScript);
+      
+      // Try to spawn Python process
       try {
-        const response = await axios.get(`http://localhost:${port}/health`, { timeout: 2000 });
-        console.log(`Backend is ready on port ${port}!`);
-        return port;
+        pythonProcess = spawn('python', [pythonScript], {
+          cwd: workingDir,
+          env: { ...process.env, PYTHONUNBUFFERED: '1' },
+          windowsHide: true
+        });
+        
+        setupPythonProcessHandlers();
+        return;
       } catch (error) {
-        attempts++;
-        console.log(`Port ${port} attempt ${attempts}/${maxAttempts}: ${error.message}`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.error('Failed to start Python in development mode:', error);
+        showBackendError('Failed to start development backend. Make sure Python is installed.');
+        return;
       }
+    } else {
+      console.error('Development Python script not found');
+      showBackendError('Development backend script not found.');
+      return;
     }
   }
   
-  throw new Error('Backend failed to start on any port');
+  console.log(`Backend executable: ${backendExecutable}`);
+  console.log(`Working directory: ${workingDir}`);
+  
+  try {
+    console.log('Starting backend executable...');
+    
+    // Start the PyInstaller executable
+    pythonProcess = spawn(backendExecutable, [], {
+      cwd: workingDir,
+      env: { 
+        ...process.env, 
+        PYTHONUNBUFFERED: '1',
+      },
+      windowsHide: true
+    });
+
+    setupPythonProcessHandlers();
+    
+  } catch (error) {
+    console.error('Exception starting backend executable:', error);
+    showBackendError(`Failed to start backend: ${error.message}`);
+  }
+}
+
+function setupPythonProcessHandlers() {
+  if (!pythonProcess) return;
+  
+  console.log(`Backend process PID: ${pythonProcess.pid}`);
+  
+  pythonProcess.stdout.on('data', (data) => {
+    console.log(`Backend stdout: ${data.toString().trim()}`);
+  });
+  
+  pythonProcess.stderr.on('data', (data) => {
+    console.error(`Backend stderr: ${data.toString().trim()}`);
+  });
+  
+  pythonProcess.on('close', (code) => {
+    console.log(`Backend process exited with code ${code}`);
+    if (code !== 0 && code !== null) {
+      showBackendError(`Backend process crashed with code ${code}`);
+    }
+  });
+  
+  pythonProcess.on('error', (error) => {
+    console.error('Backend process error:', error);
+    showBackendError(`Backend process error: ${error.message}`);
+  });
+}
+
+function showBackendError(message) {
+  console.error('Backend Error:', message);
+  
+  if (mainWindow) {
+    mainWindow.webContents.executeJavaScript(`
+      document.body.innerHTML = \`
+        <div style="padding: 40px; font-family: Arial, sans-serif; text-align: center; background: #f5f5f5;">
+          <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <h1 style="color: #d32f2f; margin-bottom: 20px;">Backend Error</h1>
+            <p style="font-size: 16px; margin: 20px 0; color: #666;">${message}</p>
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 4px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Troubleshooting:</h3>
+              <ul style="text-align: left; margin: 10px 0;">
+                <li>Try restarting the application</li>
+                <li>Check if antivirus software is blocking the application</li>
+                <li>Run as administrator if needed</li>
+                <li>Reinstall the application if the problem persists</li>
+              </ul>
+            </div>
+            <button onclick="require('electron').remote.app.quit()" 
+                    style="background: #1976d2; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-size: 16px;">
+              Close Application
+            </button>
+          </div>
+        </div>
+      \`;
+    `);
+  }
 }
 
 // IPC handlers

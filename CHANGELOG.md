@@ -1,5 +1,12 @@
 # Excel Comparison Tool - Changelog
 
+## Version 1.1.2
+
+### Bug Fixes
+- Fix comparison with the week number
+- Fix the report generation (Excel, CSV, PDF), adding the week number in it
+- Correct the launch of the Electron app, use PyInstaller instead of python path
+
 ## Version 1.1.1
 
 ### Bug Fixes

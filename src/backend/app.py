@@ -14,6 +14,7 @@ from datetime import datetime, date, time as dt_time
 from werkzeug.utils import secure_filename
 import traceback
 import logging
+import argparse
 
 # Determine project paths for development
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -452,41 +453,21 @@ def is_packaged_app():
 
 app.isPackaged = is_packaged_app()
 
-if __name__ == '__main__':
-    # Detect if running in packaged mode
-    is_packaged = getattr(sys, 'frozen', False) or hasattr(sys, '_MEIPASS')
+def main():
+    parser = argparse.ArgumentParser(description='ECT Technis Backend Server')
+    parser.add_argument('--port', type=int, default=5000, help='Port to run the server on')
+    parser.add_argument('--help', action='help', help='Show this help message')
     
-    # Override if we detect we're in an Electron packaged app
-    if not is_packaged:
-        app_path = os.path.abspath(__file__)
-        is_packaged = 'Temp' in app_path and 'resources' in app_path
+    args = parser.parse_args()
     
-    # Set up logging
-    log_file = config.get('logging.file', 'app.log')
-    log_dir = os.path.dirname(log_file)
-    if log_dir and not os.path.exists(log_dir):
-        os.makedirs(log_dir, exist_ok=True)
-    
-    logging.basicConfig(
-        level=getattr(logging, config.get('logging.level', 'INFO')),
-        format=config.get('logging.format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s'),
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler()
-        ]
+    # Your existing Flask app code here
+    app.run(
+        host='127.0.0.1',
+        port=args.port,
+        debug=False,
+        use_reloader=False,
+        threaded=True
     )
-    
-    app_name = config.get('app_name', 'Excel Comparison Tool')
-    version = config.get('version', '1.1.0')
-    
-    print(f"Starting {app_name} v{version}")
-    print(f"Application path: {project_root}")
-    print(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
-    print(f"Frontend directory: {frontend_dir}")
-    
-    if is_packaged:
-        print("Server starting in production mode on http://localhost:5000")
-        app.run(debug=False, port=5000, host='localhost', use_reloader=False)
-    else:
-        print("Server starting in development mode on http://localhost:5000")
-        app.run(debug=True, port=5000, host='localhost')
+
+if __name__ == '__main__':
+    main()

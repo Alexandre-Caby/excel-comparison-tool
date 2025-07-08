@@ -12,10 +12,10 @@ class ComparisonEngine:
     def __init__(self, key_columns=None, value_columns=None, fuzzy_threshold=100):
         # Default key columns (B, C, D)
         self.key_columns = key_columns or ["Serie", "Locomotive", "CodeOp"]
-        # Default value columns (E-J)
+        # Default value columns (E-K)
         self.value_columns = value_columns or [
             "Commentaire", "Date Butee", "Date programmation",
-            "Heure programmation", "Date sortie", "Heure sortie"
+            "Heure programmation", "Date sortie", "Heure sortie", "Semaine de programmation"
         ]
         # Fuzzy threshold (0-100), 100 = exact match
         self.fuzzy_threshold = fuzzy_threshold
@@ -100,11 +100,7 @@ class ComparisonEngine:
     def normalize_key(self, df):
         """Build composite key column from key_columns"""
         df = df.copy()
-        
-        # Debug to see available columns
-        # print(f"Available columns: {df.columns.tolist()}")
-        # print(f"Looking for key columns: {self.key_columns}")
-        
+
         # Check which key columns actually exist in the DataFrame
         available_key_cols = [col for col in self.key_columns if col in df.columns]
         
@@ -137,17 +133,13 @@ class ComparisonEngine:
         """
         base = self.normalize_key(self.prepare(base_df)).reset_index(drop=True)
         comp = self.normalize_key(self.prepare(comp_df)).reset_index(drop=True)
-        base['Base Row'] = base.index + 3
-        comp['Comp Row'] = comp.index + 8
+        base['Base Row'] = base.index + 2
+        comp['Comp Row'] = comp.index + 2
 
         # Only use value columns that exist in both DataFrames
         base_value_cols = [col for col in self.value_columns if col in base.columns]
         comp_value_cols = [col for col in self.value_columns if col in comp.columns]
         common_value_cols = list(set(base_value_cols) & set(comp_value_cols))
-        
-        # print(f"Base value columns available: {base_value_cols}")
-        # print(f"Comp value columns available: {comp_value_cols}")
-        # print(f"Common value columns: {common_value_cols}")
 
         merged = (
             base.set_index('key')[common_value_cols + ['Base Row']]
@@ -158,32 +150,69 @@ class ComparisonEngine:
         results = []
         base_keys = set(base['key'])
         comp_keys = set(comp['key'])
+        
+        # Track which keys we've already processed to avoid duplicates
+        processed_keys = set()
 
         for _, row in merged.iterrows():
             key = row['key']
+            
+            # Skip if we've already processed this key
+            if key in processed_keys:
+                continue
+                
             in_base = key in base_keys
             in_comp = key in comp_keys
             base_row = row.get('Base Row', '')
             comp_row = row.get('Comp Row', '')
+            
             # Added or removed
             if not in_base and in_comp:
-                results.append({'Key': key, 'Status': 'Ajoutée', 'Base Row': '', 'Comp Row': comp_row})
+                results.append({
+                    'Key': key, 
+                    'Status': 'Ajoutée', 
+                    'Column': '',
+                    'Base Value': '',
+                    'Comparison Value': '',
+                    'Base Row': '', 
+                    'Comp Row': comp_row
+                })
+                processed_keys.add(key)
             elif in_base and not in_comp:
-                results.append({'Key': key, 'Status': 'Supprimée', 'Base Row': base_row, 'Comp Row': ''})
+                results.append({
+                    'Key': key, 
+                    'Status': 'Supprimée', 
+                    'Column': '',
+                    'Base Value': '',
+                    'Comparison Value': '',
+                    'Base Row': base_row, 
+                    'Comp Row': ''
+                })
+                processed_keys.add(key)
             else:
-                # Compare each common value column only
+                # Compare each common value column
+                row_has_changes = False
+                row_changes = []
+                
                 for col in common_value_cols:
                     vb = row[f'{col}_base']
                     vc = row[f'{col}_comp']
-                    if pd.isna(vb) and pd.isna(vc):
+                    
+                    # Skip if both are NaN/empty
+                    if (pd.isna(vb) or str(vb).strip() == '') and (pd.isna(vc) or str(vc).strip() == ''):
                         continue
-                    if vb == vc:
+                        
+                    # Skip if values are the same
+                    if str(vb).strip() == str(vc).strip():
                         continue
+                    
                     # Fuzzy match for strings
                     if isinstance(vb, str) and isinstance(vc, str):
-                        if fuzz.ratio(vb, vc) >= self.fuzzy_threshold:
+                        if fuzz.ratio(str(vb).strip(), str(vc).strip()) >= self.fuzzy_threshold:
                             continue
-                    results.append({
+                    
+                    # This column has a difference
+                    row_changes.append({
                         'Key': key,
                         'Column': col,
                         'Base Value': vb,
@@ -192,12 +221,19 @@ class ComparisonEngine:
                         'Base Row': base_row,
                         'Comp Row': comp_row
                     })
+                    row_has_changes = True
+                
+                # Add all changes for this key
+                if row_has_changes:
+                    results.extend(row_changes)
+                    processed_keys.add(key)
+        
         return pd.DataFrame(results)
 
     def find_duplicates(self, df, source='base'):
         data = self.normalize_key(self.prepare(df)).reset_index(drop=True)
         row_col = 'Base Row' if source == 'base' else 'Comp Row'
-        data[row_col] = data.index + 3
+        data[row_col] = data.index + 2
         dup_keys = data['key'][data['key'].duplicated(keep=False)].unique()
 
         available_cols = [col for col in data.columns if col in data.columns]
@@ -608,6 +644,9 @@ class ComparisonEngine:
         # Get simplified, exploitable results
         simplified_differences = self.get_simplified_results(aggregated_results['differences'])
         
+        # Apply deduplication
+        simplified_differences = self.deduplicate_by_week(simplified_differences)
+        
         if mode == 'differences-only':
             return simplified_differences, pd.DataFrame(), pd.DataFrame()
         else:
@@ -628,6 +667,9 @@ class ComparisonEngine:
         for _, row in results_df.iterrows():
             method = row.get('method', 'unknown')
             
+            # Extract week number if available
+            week_number = self.extract_week_from_key(row.get('Key', ''))
+            
             if method == 'exact':
                 simplified.append({
                     'Key': row.get('Key', ''),
@@ -637,25 +679,22 @@ class ComparisonEngine:
                     'Comparison Value': row.get('Comparison Value', ''),
                     'Base Row': row.get('Base Row', ''),
                     'Comp Row': row.get('Comp Row', ''),
-                    'Method': 'Exact',
-                    'Confidence': 'High'
+                    'Semaine': week_number
                 })
             
             elif method == 'fuzzy':
                 # Format fuzzy matches
                 similarity = row.get('similarity', 0)
-                confidence = 'High' if similarity >= 90 else 'Medium' if similarity >= 80 else 'Low'
                 
                 simplified.append({
                     'Key': f"{row.get('base_key', '')} ≈ {row.get('comp_key', '')}",
                     'Status': 'Similaire',
-                    'Column': str(row.get('column_similarities', {})),
+                    'Column': '',
                     'Base Value': row.get('base_key', ''),
                     'Comparison Value': row.get('comp_key', ''),
                     'Base Row': '',
                     'Comp Row': '',
-                    'Method': 'Fuzzy',
-                    'Confidence': confidence,
+                    'Semaine': week_number,
                     'Similarity': f"{similarity:.1f}%"
                 })
             
@@ -669,12 +708,30 @@ class ComparisonEngine:
                     'Comparison Value': row.get('comp_key', ''),
                     'Base Row': '',
                     'Comp Row': '',
-                    'Method': method.capitalize(),
-                    'Confidence': 'Medium'
+                    'Semaine': week_number
                 })
         
         return pd.DataFrame(simplified)
     
+    def extract_week_from_key(self, key):
+        """Extract week number from key or other sources"""
+        if not key:
+            return None
+        
+        # Try to extract week number from key
+        import re
+        week_match = re.search(r'(?:week|semaine)[_\s]*(\d+)', str(key), re.IGNORECASE)
+        if week_match:
+            return week_match.group(1)
+        
+        # Try to extract from composite key parts
+        key_parts = str(key).split('_')
+        for part in key_parts:
+            if part.isdigit() and 1 <= int(part) <= 53:  # Valid week number
+                return part
+        
+        return None
+
     def compare(self, base_df, comp_df, mode='full'):
         """
         Main comparison method - routes to enhanced or standard comparison
@@ -688,7 +745,7 @@ class ComparisonEngine:
             return self._standard_comparison(base_df, comp_df, mode)
     
     def _standard_comparison(self, base_df, comp_df, mode='full'):
-        """Your existing comparison logic as fallback"""
+        """Comparison logic as fallback"""
         dynamic_value_cols = self.set_dynamic_value_columns(base_df, comp_df)
         original_value_cols = self.value_columns
         self.value_columns = dynamic_value_cols
@@ -697,9 +754,10 @@ class ComparisonEngine:
             diffs = pd.DataFrame()
             dups_base = pd.DataFrame()
             dups_comp = pd.DataFrame()
-                
+            
             if mode == 'summary':
                 diffs = self.find_differences(base_df, comp_df)
+                diffs = self.deduplicate_by_week(diffs)  # Add deduplication
                 dups_base = self.find_duplicates(base_df, source='base')
                 dups_comp = self.find_duplicates(comp_df, source='comp')
                 
@@ -713,19 +771,104 @@ class ComparisonEngine:
 
             if mode in ['full', 'differences-only']:
                 diffs = self.find_differences(base_df, comp_df)
+                diffs = self.deduplicate_by_week(diffs)  # Add deduplication
+                
             if mode == 'full':
                 dups_base = self.find_duplicates(base_df, source='base')
                 dups_comp = self.find_duplicates(comp_df, source='comp')
 
             return diffs, dups_base, dups_comp
-        
+    
         finally:
             self.value_columns = original_value_cols
+    
+    def filter_by_week_range(self, df, target_weeks=None):
+        """Filter DataFrame to only include specified week numbers"""
+        if target_weeks is None or 'Semaine de programmation' not in df.columns:
+            return df
+        
+        # Convert target_weeks to list if it's a single value
+        if isinstance(target_weeks, (int, str)):
+            target_weeks = [target_weeks]
+        
+        # Convert week numbers to string for comparison
+        target_weeks_str = [str(week).strip() for week in target_weeks]
+        
+        # Filter the DataFrame
+        mask = df['Semaine de programmation'].astype(str).str.strip().isin(target_weeks_str)
+        filtered_df = df[mask].copy()
+        
+        print(f"Week filtering: {len(df)} -> {len(filtered_df)} rows for weeks: {target_weeks_str}")
+        return filtered_df
+
+    def get_current_and_next_week(self, df):
+        """Get current week and next week numbers from the DataFrame"""
+        if 'Semaine de programmation' not in df.columns:
+            return None, None
+        
+        # Get unique week numbers, excluding empty values
+        weeks = df['Semaine de programmation'].astype(str).str.strip()
+        weeks = weeks[weeks != ''].unique()
+        
+        if len(weeks) == 0:
+            return None, None
+        
+        try:
+            # Convert to integers and sort
+            week_numbers = sorted([int(w) for w in weeks if w.isdigit()])
+            
+            if len(week_numbers) == 0:
+                return None, None
+            
+            # Find current week
+            current_week = week_numbers[0]
+            
+            # Calculate next week (handle year boundary)
+            next_week = current_week + 1
+            if next_week > 52:  # Handle year boundary
+                next_week = 1
+            
+            return current_week, next_week
+        except (ValueError, TypeError):
+            return None, None
+
+    def has_week_column(self, df):
+        """Check if DataFrame has week column with valid data"""
+        if 'Semaine de programmation' not in df.columns:
+            return False
+        
+        # Check if the column has any non-empty values
+        weeks = df['Semaine de programmation'].astype(str).str.strip()
+        non_empty_weeks = weeks[weeks != ''].unique()
+        
+        return len(non_empty_weeks) > 0
+    
+    def deduplicate_by_week(self, results_df):
+        """Remove duplicate entries that appear in multiple weeks"""
+        if results_df.empty or 'Key' not in results_df.columns:
+            return results_df
+        
+        # Group by key and column, keep only the first occurrence
+        if 'Column' in results_df.columns:
+            # For modifications, group by Key + Column
+            dedup_cols = ['Key', 'Column']
+        else:
+            # For additions/deletions, group by Key only
+            dedup_cols = ['Key']
+    
+        # Keep the first occurrence of each unique combination
+        deduplicated = results_df.drop_duplicates(subset=dedup_cols, keep='first')
+        
+        print(f"Deduplication: {len(results_df)} -> {len(deduplicated)} results")
+        return deduplicated
 
     @staticmethod
     def run_comparison(session_data, ExcelProcessor, safe_convert_func):
         settings = session_data['comparison_settings']
         mode = settings.get('comparison_mode', 'full')
+
+        use_week_filtering = settings.get('use_week_filtering', True)
+        target_weeks = settings.get('target_weeks', None)
 
         engine = ComparisonEngine(fuzzy_threshold=100)
         all_results = {}
@@ -739,6 +882,20 @@ class ComparisonEngine:
             if df_base.empty:
                 all_results[sheet] = []
                 continue
+            
+            # Check if base file has week column for filtering
+            can_filter_by_week = engine.has_week_column(df_base)
+            
+            # Auto-detect target weeks if not specified and week filtering is possible
+            if use_week_filtering and can_filter_by_week and target_weeks is None:
+                current_week, next_week = engine.get_current_and_next_week(df_base)
+                if current_week is not None and next_week is not None:
+                    target_weeks = [current_week, next_week]
+                    print(f"Auto-detected target weeks: {target_weeks}")
+            
+            # Filter base file by weeks if enabled and possible
+            if use_week_filtering and can_filter_by_week and target_weeks:
+                df_base = engine.filter_by_week_range(df_base, target_weeks)
                 
             sheet_out = []
             for comp_info in settings['comparison_files']:
@@ -763,6 +920,16 @@ class ComparisonEngine:
                 
                 df_comp = cp.get_sheet_data(target_sheet, is_base_file=False, use_dynamic_detection=True)
                 if df_comp.empty: continue
+                
+                # Check if comparison file has week column
+                comp_can_filter_by_week = engine.has_week_column(df_comp)
+                
+                # Filter comparison file by weeks if enabled and possible
+                if use_week_filtering and comp_can_filter_by_week and target_weeks:
+                    df_comp = engine.filter_by_week_range(df_comp, target_weeks)
+                    if df_comp.empty: 
+                        print(f"No data for weeks {target_weeks} in comparison file {comp_info.file_name}")
+                        continue
                 
                 # Apply site filtering if configured
                 if settings['site_mappings']:
