@@ -534,8 +534,11 @@ def export_report():
 def serve_docs(filename):
     """Serve documentation files from docs directory"""
     if getattr(sys, 'frozen', False):
-        base_path = os.path.dirname(sys.executable)
-        docs_dir = os.path.abspath(os.path.join(base_path, '..', 'docs'))
+        # The executable is in resources/backend, docs are in resources/docs
+        # So we need to go up TWO levels: backend -> resources -> docs
+        base_path = os.path.dirname(sys.executable)  # resources/backend
+        resources_path = os.path.dirname(base_path)   # resources
+        docs_dir = os.path.join(resources_path, 'docs')
     else:
         # Development mode
         docs_dir = os.path.join(project_root, 'docs')
@@ -556,8 +559,9 @@ def serve_docs(filename):
 def serve_legal_docs(filename):
     """Serve legal documentation files"""
     if getattr(sys, 'frozen', False):
-        base_path = os.path.dirname(sys.executable)
-        legal_docs_dir = os.path.abspath(os.path.join(base_path, '..', 'docs', 'legal'))
+        base_path = os.path.dirname(sys.executable)  # resources/backend
+        resources_path = os.path.dirname(base_path)   # resources
+        legal_docs_dir = os.path.join(resources_path, 'docs', 'legal')
     else:
         # Development mode
         legal_docs_dir = os.path.join(project_root, 'docs', 'legal')
