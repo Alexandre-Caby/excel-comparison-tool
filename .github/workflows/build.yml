@@ -208,32 +208,24 @@ jobs:
         pyinstaller --onefile --windowed --name=ect-backend --distpath=dist/backend --workpath=build/pyinstaller `
         --paths=$tempModuleDir `
         src/backend/app.py `
+        --add-data "docs;docs" `
         --add-data "$tempModuleDir;." `
         --hidden-import=flask `
         --hidden-import=flask_cors `
         --hidden-import=pandas `
+        --hidden-import=numpy `
         --hidden-import=openpyxl `
-        --hidden-import=openpyxl.workbook `
-        --hidden-import=openpyxl.workbook.workbook `
-        --hidden-import=openpyxl.worksheet `
-        --hidden-import=openpyxl.worksheet.worksheet `
-        --hidden-import=openpyxl.styles `
-        --hidden-import=openpyxl.styles.stylesheet `
-        --hidden-import=openpyxl.reader `
-        --hidden-import=openpyxl.reader.excel `
-        --hidden-import=openpyxl.writer `
-        --hidden-import=openpyxl.writer.excel `
-        --hidden-import=openpyxl.utils `
-        --hidden-import=openpyxl.utils.cell `
-        --hidden-import=xlsxwriter `
-        --hidden-import=reportlab `
-        --hidden-import=rapidfuzz `
-        --hidden-import=config `
-        --hidden-import=comparison_engine `
-        --hidden-import=excel_processor `
-        --hidden-import=site_matcher `
-        --hidden-import=data_models `
-        --hidden-import=report_generating
+        --hidden-import=werkzeug `
+        --hidden-import=dateutil.parser `
+        --hidden-import=tempfile `
+        --hidden-import=io `
+        --hidden-import=shutil `
+        --hidden-import=xlsxwriter.workbook `
+        --hidden-import=reportlab.lib.pagesizes `
+        --hidden-import=reportlab.pdfgen `
+        --hidden-import=reportlab.platypus `
+        --hidden-import=pandas.io.formats.excel `
+        --hidden-import=openpyxl.worksheet._writer `
 
         # Clean up temporary directory
         Remove-Item $tempModuleDir -Recurse -Force
