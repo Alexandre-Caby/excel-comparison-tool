@@ -159,60 +159,57 @@
         'license': 'licence.md'
     };
     
-     function loadDocument(docType) {
-        try {
-            console.log(`Loading ${docType} document...`);
-            
-            // Always set fallback content immediately
-            showContent(fallbackContent[docType]);
+    function renderHTMLContent(html) {
+        // Remove spinner
+        const loading = legalContent.querySelector('.loading-docs');
+        if (loading) loading.remove();
 
-            if (window.api && window.BACKEND_URL) {
-                const filename = fileMap[docType];
-                if (filename) {
-                    console.log(`API available, attempting to load ${filename} from backend...`);
-                    
-                    // Just attempt this in the background
-                    window.api.loadLegalDocument(filename)
-                        .then(markdown => {
-                            if (markdown && markdown.trim()) {
-                                const html = window.api.markdownToHtml(markdown);
-                                showContent(html);
-                                console.log(`${docType} document loaded from backend`);
-                            }
-                        })
-                        .catch(error => {
-                            console.log(`Using fallback content for ${docType} due to API error:`, error.message);
-                        });
-                }
-            }
-        } catch (error) {
-            console.error(`Error in ${docType} document loading:`, error);
-            showContent(fallbackContent[docType]);
-        }
-    }
-    
-    function showContent(htmlContent) {
         legalContent.innerHTML = `
             <div class="legal-card">
                 <div class="card-body legal-body">
-                    ${htmlContent}
+                    ${html}
                 </div>
             </div>
         `;
     }
-    
-    // Set up tab functionality
+
+    function loadDocument(docType) {
+        const filename = fileMap[docType];
+        const fallback = fallbackContent[docType] || `<p>Contenu indisponible.</p>`;
+
+        // Render fallback immediately
+        renderHTMLContent(fallback);
+
+        // Try backend if available
+        if (window.api && window.BACKEND_URL && filename) {
+            window.api.loadLegalDocument(filename)
+                .then(markdown => {
+                    if (markdown && markdown.trim()) {
+                        const html = window.api.markdownToHtml(markdown);
+                        renderHTMLContent(html);
+                        console.log(`${docType} loaded from backend`);
+                    }
+                })
+                .catch(err => {
+                    console.warn(`Error loading ${docType} from backend:`, err.message);
+                    // fallback already rendered
+                });
+        }
+    }
+
+    // Tab click handling
     document.querySelectorAll('.legal-tab').forEach(tab => {
         tab.addEventListener('click', () => {
             document.querySelectorAll('.legal-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
+
             const docType = tab.getAttribute('data-doc');
             currentDoc = docType;
             loadDocument(docType);
         });
     });
-    
-    // Execute immediately, don't wait for events
+
+    // Initial load
     loadDocument(currentDoc);
 })();
 </script>

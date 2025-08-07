@@ -127,46 +127,44 @@
         </div>
     `;
     
-    // Load content immediately - don't wait for events that might never fire
+    function renderHTMLContent(html) {
+        // Remove loading spinner
+        const loading = helpContent.querySelector('.loading-docs');
+        if (loading) loading.remove();
+
+        helpContent.innerHTML = `
+            <div class="help-card">
+                <div class="card-body help-body">
+                    ${html}
+                </div>
+            </div>
+        `;
+    }
+
     function loadHelpContent() {
         try {
-            console.log('Loading help content...');
-            
-            // Always use fallback content - it's the most reliable approach
-            helpContent.innerHTML = fallbackContent;
-            console.log('Help content loaded successfully');
-            
-            // If API is available, try to load from backend in the background
-            // but don't wait for it or depend on it
+            // Always show fallback first (instant feedback)
+            renderHTMLContent(window.api.markdownToHtml(`# Guide d'utilisation (fallback)`));
+
+            // Try loading from backend
             if (window.api && window.BACKEND_URL) {
-                console.log('API available, attempting to load from backend...');
-                
-                // Just attempt this in the background
                 window.api.loadUserGuide()
                     .then(markdown => {
                         if (markdown && markdown.trim()) {
                             const html = window.api.markdownToHtml(markdown);
-                            helpContent.innerHTML = `
-                                <div class="help-card">
-                                    <div class="card-body help-body">
-                                        ${html}
-                                    </div>
-                                </div>
-                            `;
-                            console.log('User guide loaded from backend');
+                            renderHTMLContent(html);
                         }
                     })
                     .catch(error => {
-                        console.log('Using fallback content due to API error:', error.message);
+                        console.warn('Fallback content used due to error:', error);
                     });
             }
-        } catch (error) {
-            console.error('Error in help content loading:', error);
-            helpContent.innerHTML = fallbackContent;
+        } catch (err) {
+            console.error('Error rendering help content:', err);
         }
     }
-    
-    // Execute immediately, don't wait for DOMContentLoaded
+
+    // Execute immediately
     loadHelpContent();
 })();
 </script>
