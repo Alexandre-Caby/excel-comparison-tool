@@ -74,17 +74,18 @@ class API {
     }
     
     // Preview methods
-    async previewSheet(filename, sheetName, isBaseFile = false) {
+    async previewSheet(filename, sheetName, isBaseFile = false, fileType = null) {
         return this.request('/api/preview-sheet', {
             method: 'POST',
             body: JSON.stringify({
                 filename,
                 sheet_name: sheetName,
-                is_base_file: isBaseFile
+                is_base_file: isBaseFile,
+                file_type: fileType
             })
         });
     }
-    
+
     // Site mappings
     async setSiteMappings(mappings) {
         return this.request('/api/set-site-mappings', {
@@ -112,7 +113,49 @@ class API {
     async getComparisonResults() {
         return this.request('/api/get-comparison-results');
     }
-    
+
+    // Analysis methods
+    async startPHPAnalysis(filename, sheetName, analysisOptions) {
+        return this.request('/api/start-php-analysis', {
+            method: 'POST',
+            body: JSON.stringify({
+                filename: filename,
+                sheet_name: sheetName,
+                analysis_options: analysisOptions
+            })
+        });
+    }
+
+    async getAnalysisResults() {
+        return this.request('/api/get-analysis-results');
+    }
+
+    async exportAnalysis(format, filename, exportOptions) {
+        const response = await fetch(`${this.baseURL}/api/export-analysis`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                format: format,
+                filename: filename,
+                export_options: exportOptions
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Export failed');
+        }
+        
+        return response.blob();
+    }
+
+    // Keep legacy method for backward compatibility
+    async exportPHPAnalysis(format, filename, exportOptions) {
+        return this.exportAnalysis(format, filename, exportOptions);
+    }
+
     // Reports methods
     async saveReport() {
         return this.request('/api/save-report', {
@@ -138,38 +181,54 @@ class API {
         // Handle file download
         if (response instanceof Response) {
             const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            
-            // Determine file extension and MIME type
-            let extension, mimeType;
-            switch(format) {
-                case 'excel':
-                    extension = 'xlsx';
-                    mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-                    break;
-                case 'csv':
-                    extension = 'csv';
-                    mimeType = 'text/csv';
-                    break;
-                case 'pdf':
-                    extension = 'pdf';
-                    mimeType = 'application/pdf';
-                    break;
-                default:
-                    extension = 'xlsx';
-                    mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-            }
-
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+            this.downloadBlob(blob, filename, format);
         }
         
         return response;
+    }
+
+    // Helper method for downloading blobs
+    downloadBlob(blob, filename, format) {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        // Determine file extension
+        const extensionMap = {
+            'excel': 'xlsx',
+            'csv': 'csv', 
+            'pdf': 'pdf'
+        };
+        
+        const extension = extensionMap[format] || 'xlsx';
+        a.download = filename.endsWith(`.${extension}`) ? filename : `${filename}.${extension}`;
+        
+        document.body.appendChild(a);
+        a.click();
+        
+        // Cleanup
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    }
+
+    // Generic export method for future extensibility
+    async exportData(exportType, options) {
+        const endpoint = exportType === 'comparison' ? '/api/export-report' : '/api/export-analysis';
+        
+        const response = await fetch(`${this.baseURL}${endpoint}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(options)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Export failed');
+        }
+        
+        return response.blob();
     }
 }
 

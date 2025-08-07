@@ -47,7 +47,6 @@ a {
 }
 
 a:hover {
-    color: var(--vert-rle);
     text-decoration: underline;
 }
 
@@ -72,19 +71,6 @@ input, textarea, select {
 img {
     max-width: 100%;
     height: auto;
-    display: block;
-}
-
-/* Logo specific styles */
-.logo {
-    width: 120px;
-    height: auto;
-    margin: 0 auto var(--spacing-md);
-}
-
-.logo-container {
-    text-align: center;
-    padding: var(--spacing-md) 0;
 }
 
 /* Utility classes */
@@ -109,6 +95,9 @@ img {
 
 .mb-0 { margin-bottom: 0; }
 .mb-1 { margin-bottom: var(--spacing-xs); }
+.mb-2 { margin-bottom: var(--spacing-sm); }
+.mb-3 { margin-bottom: var(--spacing-md); }
+.mb-4 { margin-bottom: var(--spacing-lg); }
 .mb-2 { margin-bottom: var(--spacing-sm); }
 .mb-3 { margin-bottom: var(--spacing-md); }
 .mb-4 { margin-bottom: var(--spacing-lg); }

@@ -163,15 +163,15 @@ class ExcelProcessor:
         return result
 
     def get_sheet_data(self, sheet_name, is_base_file=False, header_row=None, 
-                       use_dynamic_detection=True, file_type=None):
+                  use_dynamic_detection=True, file_type=None):
         """Get processed sheet data
-        
+    
         Args:
             sheet_name: Name of the sheet to process
             is_base_file: Whether this is the base file (for backward compatibility)
             header_row: Manually specify header row (0-based index)
             use_dynamic_detection: Whether to attempt to detect headers
-            file_type: Optional file type hint ('base', 'weekday', or None)
+            file_type: Type of file ('base', 'comparison', or 'analysis')
         """
         try:
             skiprows = None            
@@ -191,22 +191,30 @@ class ExcelProcessor:
                     skiprows = self.detect_header_row(sheet_name)
                     # Cache the result
                     self.detected_headers[sheet_name] = skiprows
-            
+        
             # Read the sheet with the determined header row
             df = pd.read_excel(self.file_path, sheet_name=sheet_name, skiprows=skiprows)
             
-            #print(f"Raw DataFrame shape after reading: {df.shape}")
-            #print(f"Raw DataFrame columns: {df.columns.tolist()}")
+            # Check if this is a PHP analysis file
+            is_analysis_file = file_type == 'analysis' or (
+                file_type is None and 
+                any(col in str(c).upper() for c in df.columns 
+                    for col in ['STF', 'N° MATERIEL', 'N° SEMAINE', 'EQUIPE'])
+            )
             
-            # Ensure we have at least some columns
-            if df.shape[1] < 2:
-                return pd.DataFrame()
+            if is_analysis_file:
+                return self._process_php_analysis_file(df)
+            else:
+                # Continue with standard comparison file processing
+                # Ensure we have at least some columns
+                if df.shape[1] < 2:
+                    return pd.DataFrame()
+                    
+                # Extract columns A-K for comparison files
+                col_limit = min(11, df.shape[1])
+                df = df.iloc[:, :col_limit].copy()
                 
-            # Extract columns A-K
-            col_limit = min(11, df.shape[1])
-            df = df.iloc[:, :col_limit].copy()
-            
-            detected_mappings = self.detect_column_types(df.columns)
+                detected_mappings = self.detect_column_types(df.columns)
 
             standard_columns = ["Site", "Serie", "Locomotive", "CodeOp", "Commentaire", 
                                "Date Butee", "Date programmation", "Heure programmation", 
@@ -315,7 +323,154 @@ class ExcelProcessor:
             df_with_content = df[df.apply(has_content, axis=1)]
             
             return df_with_content
-            
+                
         except Exception as e:
             print(f"Error loading sheet data: {str(e)}")
             return pd.DataFrame()
+
+    def _process_php_analysis_file(self, df):
+        """Process PHP analysis file format with different column structure"""
+        if df.empty:
+            return df
+
+        # Select desired columns (A-J and N) based on position
+        if df.shape[1] >= 14:
+            desired_cols = list(range(0, 10)) + [13]  # Columns A-J (0-9) and N (13)
+            df_copy = df.iloc[:, desired_cols].copy()
+        else:
+            df_copy = df.copy()
+
+        # PHP analysis column mappings
+        php_columns = {
+            'STF': ['stf'],
+            'SERIE': ['serie'],
+            'N° Matériel Roulant': ['n° matériel roulant', 'matériel roulant'],
+            'Code Opération': ['code opération'],
+            'Libellé Intervention': ['libéllé intervention', 'libellé intervention'],
+            'Butée Intervention': ['butée', 'butée intervention'],
+            'Date de Début': ['date de début'],
+            'Heure de Début': ['heure de début', 'heure de\ndébut'],
+            'Date de Fin': ['date de fin'],
+            'Heure de Fin': ['heure de fin', 'heure de\nfin'],
+            'N° Semaine Ou Reliquat': ['n° semaine', 'semaine ou reliquat']
+        }
+        
+        # Standardize column names using exact matching first, then fuzzy matching
+        column_map = {}
+        for i, col in enumerate(df_copy.columns):
+            col_str = str(col).lower().strip().replace('\n', ' ').replace('\r', ' ')
+            col_str = ' '.join(col_str.split())  # Remove multiple spaces
+            
+            # Try exact match first
+            for std_col, keywords in php_columns.items():
+                if col_str in [kw.lower() for kw in keywords]:
+                    column_map[col] = std_col
+                    break
+            
+            # If no exact match, try fuzzy matching
+            if col not in column_map:
+                for std_col, keywords in php_columns.items():
+                    if any(kw.lower() in col_str for kw in keywords):
+                        column_map[col] = std_col
+                        break
+        
+        # Rename matched columns
+        if column_map:
+            df_copy = df_copy.rename(columns=column_map)
+        
+        # Handle duplicate column names by keeping the first occurrence and renaming others
+        if df_copy.columns.duplicated().any():
+            cols = df_copy.columns.tolist()
+            seen = {}
+            new_cols = []
+            
+            for col in cols:
+                if col in seen:
+                    seen[col] += 1
+                    new_cols.append(f"{col}_{seen[col]}")
+                else:
+                    seen[col] = 0
+                    new_cols.append(col)
+            
+            df_copy.columns = new_cols
+
+        # Clean and standardize data
+        for col in df_copy.columns:
+            df_copy[col] = df_copy[col].fillna('')
+            
+            # Convert to string and clean, but preserve datetime columns
+            if not pd.api.types.is_datetime64_any_dtype(df_copy[col]):
+                try:
+                    df_copy[col] = df_copy[col].astype(str).str.strip()
+                except:
+                    df_copy[col] = df_copy[col].fillna('').astype(str)
+            
+            # Replace null indicators
+            df_copy[col] = df_copy[col].replace(['nan', 'NaT', 'None', 'NA', 'N/A'], '')
+        
+        # Handle time columns that might contain full datetime values
+        time_columns = ['Heure de Début', 'Heure de Fin']
+        for time_col in time_columns:
+            if time_col in df_copy.columns:
+                sample_values = df_copy[time_col].dropna().head(3)
+                
+                for i, val in enumerate(sample_values):
+                    # Check if this looks like a datetime string with 1900 date
+                    if isinstance(val, str) and ('1900-' in val or 'T' in val):
+                        # Extract time from datetime strings like "1900-01-25 12:00:00"
+                        def extract_time_from_datetime_string(dt_str):
+                            try:
+                                if isinstance(dt_str, str) and dt_str.strip():
+                                    # Parse as datetime and extract time
+                                    parsed = pd.to_datetime(dt_str, errors='coerce')
+                                    if pd.notna(parsed):
+                                        return parsed.strftime('%H:%M:%S')
+                                    else:
+                                        # Try manual parsing for formats like "1900-01-25 12:00:00"
+                                        if ' ' in dt_str:
+                                            time_part = dt_str.split(' ')[-1]
+                                            if ':' in time_part:
+                                                return time_part
+                                return dt_str
+                            except:
+                                return dt_str
+                        
+                        df_copy[time_col] = df_copy[time_col].apply(extract_time_from_datetime_string)
+                        break
+        
+        # CRITICAL FIX: Save original date strings before conversion to allow proper parsing later
+        date_columns = ['Date de Début', 'Date de Fin', 'Butée Intervention']
+        for date_col in date_columns:
+            if date_col in df_copy.columns:
+                # Save original values in a separate column
+                df_copy[f"{date_col}_Original"] = df_copy[date_col].copy()
+                
+                # Check if date column contains datetime values or strings
+                sample_values = df_copy[date_col].dropna().head(3)
+                is_iso_format = False
+                
+                # Try to detect ISO format
+                for val in sample_values:
+                    if isinstance(val, str) and re.match(r'^\d{4}-\d{2}-\d{2}', val):
+                        is_iso_format = True
+                        break
+                
+                # Use the appropriate dayfirst setting based on detected format
+                try:
+                    if is_iso_format:
+                        df_copy[date_col] = pd.to_datetime(df_copy[date_col], errors='coerce', dayfirst=False)
+                    else:
+                        df_copy[date_col] = pd.to_datetime(df_copy[date_col], errors='coerce', dayfirst=True)
+                except Exception as e:
+                    print(f"Date conversion error for {date_col}: {e}")
+        
+        # Filter out empty rows
+        if not df_copy.empty:
+            has_content = df_copy.apply(
+                lambda row: any(str(val).strip() not in ('', 'nan', 'NaT', 'None', 'NA', 'N/A') 
+                            for val in row), 
+                axis=1
+            )
+            df_copy = df_copy[has_content]
+        
+        return df_copy

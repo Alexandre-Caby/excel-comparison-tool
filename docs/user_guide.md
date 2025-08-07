@@ -8,8 +8,9 @@
 5. Lancement de la Comparaison
 6. Analyse et Visualisation des Résultats
 7. Génération et Export des Rapports
-8. Dépannage
-9. FAQ
+8. Module d'Analyse PHP
+9. Dépannage
+10. FAQ
 
 ---
 
@@ -24,6 +25,7 @@ ECT Technis est un outil spécialisé pour comparer des fichiers Excel avec d'au
 - Détection des modifications, ajouts, suppressions et doublons
 - Génération de rapports exportables (Excel, CSV, PDF)
 - Interface claire pour visualiser et filtrer les résultats
+- **NOUVEAU**: Analyse complète des programmes de maintenance PHP
 
 ---
 
@@ -33,7 +35,7 @@ ECT Technis est un outil spécialisé pour comparer des fichiers Excel avec d'au
 
 - Windows 10/11
 - 4 Go de RAM minimum
-- 50 Mo d’espace disque libre
+- 50 Mo d'espace disque libre
 - Python 3.9+ (si utilisation depuis le code source)
 
 ### Installation
@@ -42,7 +44,7 @@ ECT Technis est un outil spécialisé pour comparer des fichiers Excel avec d'au
 
 1. Téléchargez la dernière version depuis la page des versions.
 2. Exécutez le fichier `ECT_Technis_version.exe`.
-3. Aucune installation supplémentaire n’est requise.
+3. Aucune installation supplémentaire n'est requise.
 
 #### Depuis le code source
 
@@ -50,7 +52,7 @@ ECT Technis est un outil spécialisé pour comparer des fichiers Excel avec d'au
 2. Clonez le dépôt du projet.
 3. Installez les dépendances :  
    `pip install -r requirements.txt`
-4. Lancez l’application :  
+4. Lancez l'application :  
    `python src/backend/app.py`
 
 ---
@@ -111,7 +113,7 @@ Après la comparaison, la page "Comparaison" affiche :
 ### c. Tableau des doublons
 
 - Affiche les enregistrements présents plusieurs fois dans un même fichier.
-- Permet d’identifier rapidement les anomalies de saisie ou de duplication.
+- Permet d'identifier rapidement les anomalies de saisie ou de duplication.
 
 ### d. Navigation et ergonomie
 
@@ -163,33 +165,125 @@ Après la comparaison, la page "Comparaison" affiche :
 
 ---
 
-## 8. Dépannage
+## 8. Module d'Analyse PHP
+
+### a. Présentation du module
+
+Le module d'analyse PHP permet d'analyser en profondeur les programmes de maintenance en calculant avec précision :
+- Les jours d'immobilisation par engin
+- La validité des rendez-vous de maintenance
+- La charge de travail par semaine
+- Les conflits et anomalies dans les données
+
+### b. Accès au module d'analyse PHP
+
+1. Accédez à la page "Analyse PHP" via le menu latéral.
+2. Importez votre fichier PREPA PHP (formats acceptés : `.xlsx`, `.xls`).
+3. Sélectionnez la feuille correspondant au site à analyser (ex : "lens", "bgl").
+4. Choisissez une semaine spécifique pour filtrer les données ou "Tout" pour analyser l'ensemble.
+5. Cliquez sur "Démarrer l'analyse" pour lancer le traitement.
+
+### c. Interprétation des métriques
+
+Les résultats affichent plusieurs métriques clés :
+
+**Métriques de résumé :**
+- **Total RDV** : Nombre total de rendez-vous de maintenance planifiés
+- **Total Clients** : Nombre de clients uniques identifiés
+- **Total de Séries** : Nombre de séries d'engins différentes
+- **Total Heures** : Somme des heures d'immobilisation de tous les engins
+- **Jours avec RDV** : Nombre de jours calendaires où le site a au moins un engin en maintenance
+- **Conflits** : Nombre d'anomalies détectées dans les données
+
+**Métriques par engin :**
+- **RDV Total** : Nombre total de rendez-vous pour l'engin
+- **RDV Valides/Invalides** : Les RDV invalides ont des dates manquantes ou incorrectes
+- **Jours d'immobilisation** : Nombre de jours calendaires distincts où l'engin est immobilisé
+- **Heures d'immobilisation** : Jours d'immobilisation × 24h
+- **Durée moyenne** : Heures totales ÷ Nombre de RDV valides
+- **Opérations** : Nombre d'opérations distinctes planifiées
+- **Clients** : Nombre de clients distincts concernés
+
+### d. Principe de calcul important
+
+**Pour éviter les comptages en double :**
+Si plusieurs opérations sont effectuées en parallèle sur un même engin le même jour, ce jour n'est compté qu'une seule fois dans le calcul des jours d'immobilisation.
+
+**Exemple :**
+Si un engin BB75000 a trois opérations distinctes prévues le 20/05/2025, l'analyse :
+- Compte 3 RDV distincts
+- Mais compte seulement 1 jour d'immobilisation (soit 24h)
+
+### e. Données concaténées et filtrage
+
+L'onglet "Données concaténées" permet de :
+- Visualiser tous les rendez-vous dans un format standardisé
+- Filtrer par client, série d'engin ou date
+- Afficher les durées calculées pour chaque rendez-vous
+- Identifier les RDV appartenant à un même groupe d'opérations
+
+Format de concaténation : `Site_Client_Engin_DateDébut_DateFin_Opération`
+
+### f. Détection des conflits
+
+Le système détecte automatiquement plusieurs types d'anomalies :
+- **Date début manquante** : L'engin n'est peut-être pas encore sur site
+- **Date fin manquante** : L'entretien n'est peut-être pas encore défini
+- **Inversion de dates** : La date de fin est antérieure à la date de début
+- **Immobilisation excessive** : Période d'immobilisation anormalement longue (>1000 jours)
+
+Les conflits sont regroupés par type et par engin pour une meilleure lisibilité.
+
+### g. Export des résultats d'analyse
+
+1. Après l'analyse, cliquez sur "Exporter les résultats".
+2. Choisissez le format Excel.
+3. Le fichier généré contient plusieurs onglets :
+   - Résumé global
+   - Analyse par engin
+   - Analyse par semaine
+   - Données concaténées
+   - Liste des conflits détectés
+
+---
+
+## 9. Dépannage
 
 ### Problèmes courants
 
 - **Différences inattendues** : Vérifiez la sélection des feuilles et la correspondance des codes de site.
 - **Identifiants de locomotive non reconnus** : Contrôlez la colonne "Locomotive" dans vos fichiers.
-- **Application ne démarre pas** : Vérifiez l’installation de Python et des dépendances, ou relancez l’application autonome.
+- **Application ne démarre pas** : Vérifiez l'installation de Python et des dépendances, ou relancez l'application autonome.
+- **Problèmes de dates dans l'analyse PHP** : Vérifiez le format des dates dans votre fichier d'entrée. Le système prend en charge plusieurs formats mais certains formats inhabituels peuvent nécessiter un prétraitement.
 
 ---
 
-## 9. FAQ
+## 10. FAQ
 
 **Q : Puis-je comparer plusieurs fichiers à la fois ?**  
 R : Oui, vous pouvez importer un fichier de base et plusieurs fichiers de comparaison.
 
-**Q : Comment l’outil gère-t-il les différences de format d’identifiant de locomotive ?**  
+**Q : Comment l'outil gère-t-il les différences de format d'identifiant de locomotive ?**  
 R : Les identifiants sont normalisés automatiquement, en préservant les préfixes de lettres.
 
-**Q : L’outil modifie-t-il mes fichiers Excel d’origine ?**  
-R : Non, l’outil ne fait que lire vos fichiers, ils ne sont jamais modifiés.
+**Q : L'outil modifie-t-il mes fichiers Excel d'origine ?**  
+R : Non, l'outil ne fait que lire vos fichiers, ils ne sont jamais modifiés.
 
-**Q : Comment retrouver une ligne dans le fichier d’origine ?**  
-R : Les colonnes "Base Row" et "Comp Row" dans les exports indiquent la ligne d’origine dans chaque fichier.
+**Q : Comment retrouver une ligne dans le fichier d'origine ?**  
+R : Les colonnes "Base Row" et "Comp Row" dans les exports indiquent la ligne d'origine dans chaque fichier.
 
-**Q : Comment l’outil détermine-t-il qu’une ligne a été modifiée ?**  
-R : Il compare les lignes présentes dans les deux fichiers à l’aide d’une clé composite (Locomotive_CodeOp).
+**Q : Comment l'outil détermine-t-il qu'une ligne a été modifiée ?**  
+R : Il compare les lignes présentes dans les deux fichiers à l'aide d'une clé composite (Locomotive_CodeOp).
+
+**Q : Comment sont calculés les jours d'immobilisation dans le module d'analyse PHP ?**  
+R : Les jours d'immobilisation représentent le nombre de jours calendaires uniques pendant lesquels un engin est en maintenance. Si plusieurs opérations sont effectuées le même jour sur le même engin, ce jour n'est compté qu'une seule fois.
+
+**Q : Que signifie "RDV invalide" dans l'analyse PHP ?**  
+R : Un RDV est considéré comme invalide lorsqu'il manque une date de début ou de fin, ou lorsque ces dates sont dans un format non reconnu. Ces RDV sont exclus des calculs de durée mais restent visibles dans les tableaux.
+
+**Q : Comment filtrer les données par semaine dans l'analyse PHP ?**  
+R : Lors du lancement de l'analyse, vous pouvez sélectionner une semaine spécifique dans le menu déroulant (format "S21", "S22", etc.) pour ne voir que les RDV de cette semaine.
 
 ---
 
-Pour toute question ou problème, consultez la section Dépannage ou contactez le gestionnaire
+Pour toute question ou problème, consultez la section Dépannage ou contactez le gestionnaire de l'application.

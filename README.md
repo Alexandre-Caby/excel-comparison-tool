@@ -4,20 +4,36 @@ A powerful tool for comparing and analyzing Excel files with other Excel sources
 
 ## Features
 
+### File Comparison
 - **File Comparison**: Compare PREPA PHP files with other Excel sources
 - **Site Matching**: Intelligent mapping using site codes (LE, BGL, etc.)
 - **Difference Detection**: Identify modifications between files
 - **Duplicate Detection**: Find duplicate entries across datasets (now using composite keys: Serie, Locomotive, CodeOp)
-- **Enhanced Report Generation**: 
-  - **Excel Reports**: Visually rich Excel reports with color-coded differences and formatted worksheets
-  - **CSV Export**: Optimized classic CSV format with proper encoding for European Excel compatibility
-  - **PDF Reports**: Professional PDF reports with data visualization charts and robust formatting
+
+### Report Generation
+- **Excel Reports**: Visually rich Excel reports with color-coded differences and formatted worksheets
+- **CSV Export**: Optimized classic CSV format with proper encoding for European Excel compatibility
+- **PDF Reports**: Professional PDF reports with data visualization charts and robust formatting
+
+### PHP Maintenance Analysis
+- **Equipment Analysis**: Track immobilization days, valid/invalid appointments, and operations by equipment
+- **Weekly Planning**: View scheduled maintenance by week with occupancy metrics and statistics
+- **Data Quality Detection**: Automatically identify and flag date issues and format problems
+- **Conflict Detection**: Smart identification of data issues categorized by severity level
+- **Concatenated Data View**: Filter and analyze raw maintenance data with consistent calculations
+
+### User Experience
+- **Interactive Help System**: Collapsible information panels explaining metrics and calculations
+- **Enhanced Tooltips**: Detailed explanations for all summary metrics
 - **Data Visualization**: Charts and graphs in reports for better data interpretation
 - **User-Friendly Interface**: Modern and intuitive web application
 - **Custom Export Filenames**: Set the export filename from the frontend, respected by the backend
+
+### Advanced Features
 - **Fuzzy Matching**: Enhanced comparison using fuzzy logic for string differences
 - **Smooth Documentation Navigation**: In-app help with smooth scrolling and robust anchor navigation
 - **Robust Error Handling**: Improved stability for PDF generation and temporary file operations
+- **Non-destructive Data Validation**: Data quality issues are flagged rather than removed for transparency
 
 ## Architecture
 
@@ -29,6 +45,7 @@ A powerful tool for comparing and analyzing Excel files with other Excel sources
 ### Backend
 - **REST API**: Endpoints for file processing
 - **Comparison Engine**: Advanced logic for analyzing Excel files
+- **PHP Analysis Engine**: Specialized processing for maintenance program files
 - **Data Management**: Structured data processing
 - **Reporting System**: Flexible output formats with optimized data handling
 
@@ -40,6 +57,7 @@ Check our [complete user guide](./docs/user_guide.md) for detailed instructions 
 - Interpreting results
 - Generating reports
 - Exporting data in different formats
+- Using the PHP analysis module
 
 ## Installation and Deployment
 
@@ -50,7 +68,7 @@ Check our [complete user guide](./docs/user_guide.md) for detailed instructions 
   - pandas
   - reportlab
   - xlsxwriter
-  - flask
+  - Electron
 
 ### Development Setup
 
@@ -94,7 +112,7 @@ excel-comparison-tool/
 │       ├── css/            # CSS styles
 │       ├── js/             # JavaScript scripts
 │       ├── pages/          # HTML components
-│       ├── images/          # Images and icons
+│       ├── images/         # Images and icons
 │       └── index.html      # Main page
 ├── requirements.txt        # Python dependencies
 ├── package.json            # Node.js dependencies

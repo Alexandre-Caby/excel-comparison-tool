@@ -26,9 +26,7 @@
     /* Background colors */
     --background: var(--white);
     --background-secondary: var(--gray-100);
-    --sidebar-background: var(--vert-rle);
     --card-background: var(--white);
-    --input-background: var(--white);
     
     /* Text colors */
     --text-primary: var(--gray-900);
@@ -39,17 +37,10 @@
     --border-color: var(--gray-300);
     --border-light: var(--gray-200);
     
-    /* Table colors */
-    --table-header-bg: var(--vert-rle);
-    --table-header-text: var(--white);
-    --table-row-even: var(--gray-100);
-    --table-row-hover: var(--vert-rle-10);
-    
     /* Shadow */
-    --shadow-color: rgba(0, 0, 0, 0.1);
-    --shadow-light: 0 2px 4px var(--shadow-color);
-    --shadow-medium: 0 4px 8px var(--shadow-color);
-    --shadow-heavy: 0 8px 16px var(--shadow-color);
+    --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-medium: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --shadow-heavy: 0 8px 16px rgba(0, 0, 0, 0.1);
     
     /* Spacing */
     --spacing-xs: 0.25rem;
@@ -65,10 +56,19 @@
     --radius-lg: 12px;
     
     /* Typography */
-    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     --font-size-xs: 0.75rem;
     --font-size-sm: 0.875rem;
     --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 1.875rem;
+    
+    /* Transitions */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.3s ease;
+
     --font-size-lg: 1.125rem;
     --font-size-xl: 1.25rem;
     --font-size-2xl: 1.5rem;

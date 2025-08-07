@@ -399,7 +399,7 @@ class ComparisonManager {
             }
             
             // Setup filters if not already done
-            if (!document.getElementById('filters-container').hasChildNodes()) {
+            if (!document.getElementById('filters-container-comparison').hasChildNodes()) {
                 this.setupFilters();
             }
         }
@@ -680,9 +680,8 @@ class ComparisonManager {
         return key;
     }
 
-    // Add filtering capabilities
     setupFilters() {
-        const filtersContainer = document.getElementById('filters-container');
+        const filtersContainer = document.getElementById('filters-container-comparison');
         if (!filtersContainer) return;
         
         // Create status filter
@@ -763,15 +762,43 @@ class ComparisonManager {
             </div>
         `;
         
+        // Add clear filters button
+        const filterActions = document.createElement('div');
+        filterActions.className = 'filter-actions';
+        filterActions.innerHTML = `
+            <button id="clear-filters" title="Réinitialiser tous les filtres">
+                Effacer les filtres
+            </button>
+        `;
+        
+        // Add filter info display
+        const filterInfo = document.createElement('div');
+        filterInfo.id = 'filter-info-comparison';
+        filterInfo.className = 'filter-info-comparison';
+        
         // Add filters to container
         filtersContainer.innerHTML = '';
         filtersContainer.appendChild(statusFilter);
         filtersContainer.appendChild(columnFilter);
         filtersContainer.appendChild(searchFilter);
+        filtersContainer.appendChild(filterActions);
+        filtersContainer.appendChild(filterInfo);
         
         // Add event listeners
         document.getElementById('status-filter').addEventListener('change', () => this.applyFilters());
         document.getElementById('column-filter')?.addEventListener('change', () => this.applyFilters());
+        
+        // Add clear filters functionality
+        document.getElementById('clear-filters').addEventListener('click', () => {
+            document.getElementById('status-filter').value = 'all';
+            document.getElementById('column-filter').value = 'all';
+            document.getElementById('search-filter').value = '';
+            document.getElementById('case-sensitive').checked = false;
+            document.getElementById('exact-match').checked = false;
+            document.getElementById('search-field').value = 'all';
+            document.getElementById('clear-search').style.display = 'none';
+            this.applyFilters();
+        });
         
         // Add event listeners for enhanced search functionality
         document.getElementById('search-filter').addEventListener('input', () => {
@@ -864,7 +891,7 @@ class ComparisonManager {
         });
         
         // Update filters info
-        const filterInfo = document.getElementById('filter-info');
+        const filterInfo = document.getElementById('filter-info-comparison');
         if (filterInfo) {
             let filterText = `Affichage de ${filteredData.length} sur ${this.allDifferences.length} différences`;
             if (searchTerm) {

@@ -109,6 +109,16 @@ if getattr(sys, 'frozen', False):
             pass
     
     try:
+        from analysis import AnalysisEngine
+    except ImportError:
+        logger.warning("AnalysisEngine not found")
+        class AnalysisEngine:
+            @staticmethod
+            def analyze_php_file(file_path, sheet_name, analysis_options=None):
+                return {"error": "AnalysisEngine not available"}
+
+    
+    try:
         from report_generating import ReportGenerator
     except ImportError:
         logger.error("ReportGenerator not found")
@@ -135,13 +145,34 @@ else:
     from src.core.excel_processor import ExcelProcessor
     from src.core.site_matcher import SiteMatcher
     from src.models.data_models import FileInfo, ComparisonSummary
+    from src.core.analysis import AnalysisEngine
     from src.core.report_generating import ReportGenerator
 
 safe_convert = Config.safe_convert
 
+def get_docs_directory():
+    """Get the correct docs directory path for both development and packaged modes"""
+    if getattr(sys, 'frozen', False):
+        # Running as PyInstaller bundle
+        docs_dir = os.path.join(sys._MEIPASS, 'docs')
+        logger.info(f"Using packaged docs directory: {docs_dir}")
+    else:
+        # Development mode
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        docs_dir = os.path.join(project_root, 'docs')
+        logger.info(f"Using development docs directory: {docs_dir}")
+    
+    return docs_dir
+
+def get_legal_docs_directory():
+    """Get the correct legal docs directory path for both development and packaged modes"""
+    docs_dir = get_docs_directory()
+    legal_docs_dir = os.path.join(docs_dir, 'legal')
+    return legal_docs_dir
+
 app = Flask(__name__)
 CORS(app)
-
+    
 # Handle paths for both development and PyInstaller modes
 if getattr(sys, 'frozen', False):
     project_root = os.path.dirname(sys.executable)
@@ -180,9 +211,31 @@ session_data = {
     'comp_file_info': [],
     'comparison_settings': None,
     'comparison_results': None,
+    'php_analysis_results': None,
     'reports': [],
     'site_mappings': {"LE": "Lens", "BGL": "BGL"}
 }
+
+if not getattr(sys, 'frozen', False):
+    # Development mode - serve frontend files
+    @app.route('/')
+    def serve_index():
+        """Serve the main index.html file"""
+        return send_from_directory(frontend_dir, 'index.html')
+    
+    @app.route('/<path:path>')
+    def serve_static_files(path):
+        """Serve static files (CSS, JS, images, etc.)"""
+        file_path = os.path.join(frontend_dir, path)
+        
+        if os.path.exists(file_path) and not os.path.isdir(file_path):
+            return send_from_directory(frontend_dir, path)
+        elif path.startswith('pages/') and path.endswith('.html'):
+            # Handle direct page requests
+            return send_from_directory(frontend_dir, path)
+        else:
+            # Fallback to index.html for SPA routing
+            return send_from_directory(frontend_dir, 'index.html')
 
 @app.route('/health')
 def health_check():
@@ -310,6 +363,7 @@ def preview_sheet():
         filename = data.get('filename')
         sheet_name = data.get('sheet_name')
         is_base_file = data.get('is_base_file', False)
+        file_type = data.get('file_type')
         
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         if not os.path.exists(filepath):
@@ -317,16 +371,62 @@ def preview_sheet():
         
         processor = ExcelProcessor(filepath)
         if processor.load_workbook():
-            processed_data = processor.get_sheet_data(sheet_name, is_base_file=is_base_file)
+            processed_data = processor.get_sheet_data(sheet_name, is_base_file=is_base_file, file_type=file_type)
+            
+            # For regular preview, limit to 5 rows
             processed_preview = processed_data.head(5).fillna('').to_dict('records')
             
-            return jsonify({
+            response_data = {
                 'processed_preview': safe_convert(processed_preview),
                 'processed_columns': safe_convert(processed_data.columns.tolist())
-            })
+            }
+            
+            # For PHP analysis files, extract week values from the actual week column
+            if file_type == 'analysis':
+                week_column = 'N° Semaine Ou Reliquat'
+                if week_column in processed_data.columns:
+                    # Get all unique week values from the entire dataset
+                    unique_weeks_raw = processed_data[week_column].dropna().astype(str).str.strip()
+                    unique_weeks_raw = unique_weeks_raw[unique_weeks_raw != ''].unique().tolist()
+                    
+                    # Process the actual week values - don't calculate from dates
+                    formatted_weeks = []
+                    for week in unique_weeks_raw:
+                        week_str = str(week).strip()
+                        if week_str.upper() == 'RELIQUAT':
+                            formatted_weeks.append('RELIQUAT')
+                        else:
+                            # Check if it already has 'S' prefix
+                            if week_str.upper().startswith('S'):
+                                formatted_weeks.append(week_str.upper())
+                            else:
+                                # Try to parse as number and add S prefix
+                                try:
+                                    week_num = int(float(week_str))
+                                    formatted_weeks.append(f'S{week_num}')
+                                except (ValueError, TypeError):
+                                    # If not a number, keep as is
+                                    formatted_weeks.append(week_str)
+                    
+                    response_data['unique_weeks'] = safe_convert(formatted_weeks)
+                    
+                    # Also provide more data for better preview
+                    sample_size = min(20, len(processed_data))
+                    extended_preview = processed_data.head(sample_size).fillna('').to_dict('records')
+                    response_data['extended_preview'] = safe_convert(extended_preview)
+                    
+                    # print(f"Week column found: {week_column}")
+                    # print(f"Raw week values: {unique_weeks_raw}")
+                    # print(f"Formatted weeks: {formatted_weeks}")
+                else:
+                    response_data['unique_weeks'] = []
+                    response_data['extended_preview'] = processed_preview
+                    # print(f"Week column '{week_column}' not found in columns: {processed_data.columns.tolist()}")
+            
+            return jsonify(response_data)
         else:
             return jsonify({'error': 'Failed to process file'}), 400
-            
+
     except Exception as e:
         logger.exception(f"Error previewing sheet: {str(e)}")
         return jsonify({'error': str(e)}), 500
@@ -449,6 +549,7 @@ def get_reports():
 
 @app.route('/api/export-report', methods=['POST'])
 def export_report():
+    """Export comparison report"""
     try:
         data = request.get_json()
         report_id = data.get('report_id')
@@ -464,23 +565,29 @@ def export_report():
         if not report:
             return jsonify({'error': 'Report not found'}), 404
 
-        # Create temporary file
+        # Create temporary file using unified export engine
         temp_file = None
         try:
-            if format_type == 'excel':
-                temp_file = ReportGenerator.generate_excel_report_temp(report, session_data, app.config['UPLOAD_FOLDER'])
-                mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            elif format_type == 'csv':
-                temp_file = ReportGenerator.generate_csv_report_temp(report, session_data, app.config['UPLOAD_FOLDER'])
-                mimetype = 'text/csv'
-            elif format_type == 'pdf':
-                temp_file = ReportGenerator.generate_pdf_report_temp(report, session_data, app.config['UPLOAD_FOLDER'])
-                mimetype = 'application/pdf'
-            else:
-                return jsonify({'error': 'Format non supporté'}), 400
-
+            export_data = {
+                'type': 'comparison',
+                'report': report,
+                'session_data': session_data,
+                'format': format_type,
+                'filename': filename
+            }
+            
+            temp_file = ReportGenerator.generate_unified_export(export_data, app.config['UPLOAD_FOLDER'])
+            
             if not temp_file or not os.path.exists(temp_file):
-                return jsonify({'error': 'Erreur lors de la génération du fichier temporaire'}), 500
+                return jsonify({'error': 'Failed to create export file'}), 500
+
+            # Determine MIME type
+            mimetype_map = {
+                'excel': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'csv': 'text/csv',
+                'pdf': 'application/pdf'
+            }
+            mimetype = mimetype_map.get(format_type, 'application/octet-stream')
 
             return send_file(
                 temp_file,
@@ -498,38 +605,270 @@ def export_report():
             raise e
         
     except Exception as e:
-        logger.exception(f"Error exporting report: {str(e)}")
-        return jsonify({'error': f'Erreur lors de l\'export: {str(e)}'}), 500
+        logger.exception(f"Error exporting comparison report: {str(e)}")
+        return jsonify({'error': f'Export failed: {str(e)}'}), 500
+
+@app.route('/api/start-php-analysis', methods=['POST'])
+def start_php_analysis():
+    """Start PHP analysis on uploaded file"""
+    try:
+        data = request.get_json()
+        filename = data.get('filename')
+        sheet_name = data.get('sheet_name')
+        analysis_options = data.get('analysis_options', {})
+        
+        if not filename or not sheet_name:
+            return jsonify({'error': 'Filename and sheet name required'}), 400
+        
+        # Check if file exists
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'File not found'}), 404
+        
+        logger.info(f"Starting PHP analysis for {filename}, sheet: {sheet_name}")
+        
+        # Initialize analysis engine
+        analysis_engine = AnalysisEngine()
+        
+        # Run analysis
+        results = analysis_engine.analyze_php_file(filepath, sheet_name, analysis_options)
+        
+        # Store results in session
+        session_data['php_analysis_results'] = results
+        
+        logger.info("PHP analysis completed")
+        
+        return jsonify({
+            'success': True,
+            'results': safe_convert(results)
+        })
+        
+    except Exception as e:
+        logger.exception(f"Error in PHP analysis: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/get-php-analysis-results')
+def get_php_analysis_results():
+    """Get PHP analysis results"""
+    if 'php_analysis_results' in session_data:
+        return jsonify({
+            'success': True,
+            'results': safe_convert(session_data['php_analysis_results'])
+        })
+    
+    return jsonify({
+        'error': 'No PHP analysis results available'
+    }), 404
+
+@app.route('/api/export-analysis', methods=['POST'])
+def export_analysis():
+    """Export analysis results with unified export engine"""
+    try:
+        data = request.get_json()
+        format_type = data.get('format', 'excel')
+        filename = data.get('filename', 'analysis_export')
+        export_options = data.get('export_options', {})
+        
+        if 'php_analysis_results' not in session_data:
+            return jsonify({'error': 'No analysis results to export'}), 404
+        
+        # Prepare export data for unified engine
+        export_data = {
+            'type': 'analysis',
+            'results': session_data['php_analysis_results'],
+            'format': format_type,
+            'filename': filename,
+            'export_options': export_options
+        }
+        
+        # Create temporary file using unified export engine
+        temp_file = ReportGenerator.generate_unified_export(export_data, app.config['UPLOAD_FOLDER'])
+        
+        if not temp_file or not os.path.exists(temp_file):
+            return jsonify({'error': 'Failed to create export file'}), 500
+        
+        # Determine file extension and MIME type
+        ext_map = {'excel': 'xlsx', 'csv': 'csv', 'pdf': 'pdf'}
+        mimetype_map = {
+            'excel': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'csv': 'text/csv',
+            'pdf': 'application/pdf'
+        }
+        
+        ext = ext_map.get(format_type, 'xlsx')
+        mimetype = mimetype_map.get(format_type, 'application/octet-stream')
+        final_filename = f"{filename}.{ext}"
+        
+        return send_file(
+            temp_file,
+            as_attachment=True,
+            download_name=final_filename,
+            mimetype=mimetype
+        )
+        
+    except Exception as e:
+        logger.exception(f"Error exporting analysis: {str(e)}")
+        return jsonify({'error': f'Export failed: {str(e)}'}), 500
+
+# Keep the legacy route for backward compatibility but redirect to new system
+@app.route('/api/export-php-analysis', methods=['POST'])
+def export_php_analysis():
+    """Legacy route - redirect to unified export system"""
+    try:
+        data = request.get_json()
+        
+        # Transform legacy request to new format
+        unified_data = {
+            'format': data.get('format', 'excel'),
+            'filename': data.get('filename', 'php_analysis'),
+            'export_options': data.get('export_options', {})
+        }
+        
+        # Use the new unified export route
+        return export_analysis_internal(unified_data)
+        
+    except Exception as e:
+        logger.exception(f"Error in legacy PHP analysis export: {str(e)}")
+        return jsonify({'error': f'Export failed: {str(e)}'}), 500
+
+def export_analysis_internal(data):
+    """Internal method for analysis export"""
+    format_type = data.get('format', 'excel')
+    filename = data.get('filename', 'analysis_export')
+    export_options = data.get('export_options', {})
+    
+    if 'php_analysis_results' not in session_data:
+        raise Exception('No analysis results to export')
+    
+    export_data = {
+        'type': 'analysis',
+        'results': session_data['php_analysis_results'],
+        'format': format_type,
+        'filename': filename,
+        'export_options': export_options
+    }
+    
+    temp_file = ReportGenerator.generate_unified_export(export_data, app.config['UPLOAD_FOLDER'])
+    
+    if not temp_file or not os.path.exists(temp_file):
+        raise Exception('Failed to create export file')
+    
+    ext_map = {'excel': 'xlsx', 'csv': 'csv', 'pdf': 'pdf'}
+    mimetype_map = {
+        'excel': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'csv': 'text/csv', 
+        'pdf': 'application/pdf'
+    }
+    
+    ext = ext_map.get(format_type, 'xlsx')
+    mimetype = mimetype_map.get(format_type, 'application/octet-stream')
+    final_filename = f"{filename}.{ext}"
+    
+    return send_file(
+        temp_file,
+        as_attachment=True,
+        download_name=final_filename,
+        mimetype=mimetype
+    )
 
 # Serve documentation files
 @app.route('/docs/<path:filename>')
 def serve_docs(filename):
     """Serve documentation files from docs directory"""
-    if getattr(sys, 'frozen', False):
-        docs_dir = os.path.join(sys._MEIPASS, 'docs')
-    else:
-        docs_dir = os.path.join(project_root, 'docs')
+    docs_dir = get_docs_directory()
+    file_path = os.path.join(docs_dir, filename)
+    
+    logger.info(f"Attempting to serve docs file: {filename}")
+    logger.info(f"Docs directory: {docs_dir}")
+    logger.info(f"Full file path: {file_path}")
+    logger.info(f"File exists: {os.path.exists(file_path)}")
     
     if not os.path.exists(docs_dir):
+        logger.error(f"Documentation directory not found: {docs_dir}")
         return jsonify({'error': 'Documentation directory not found'}), 404
     
-    try:
-        return send_from_directory(docs_dir, filename)
-    except FileNotFoundError:
+    if not os.path.exists(file_path):
+        logger.error(f"File not found: {file_path}")
+        # List available files for debugging
+        if os.path.exists(docs_dir):
+            available_files = os.listdir(docs_dir)
+            logger.info(f"Available files in docs directory: {available_files}")
         return jsonify({'error': f'File not found: {filename}'}), 404
+    
+    try:
+        # Read file content and return as plain text for markdown files
+        if filename.endswith('.md'):
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return content, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+        else:
+            return send_from_directory(docs_dir, filename)
+    except Exception as e:
+        logger.error(f"Error serving file {filename}: {str(e)}")
+        return jsonify({'error': f'Error reading file: {str(e)}'}), 500
 
 @app.route('/docs/legal/<path:filename>')
 def serve_legal_docs(filename):
     """Serve legal documentation files"""
-    if getattr(sys, 'frozen', False):
-        legal_docs_dir = os.path.join(sys._MEIPASS, 'docs', 'legal')
-    else:
-        legal_docs_dir = os.path.join(project_root, 'docs', 'legal')
+    legal_docs_dir = get_legal_docs_directory()
+    file_path = os.path.join(legal_docs_dir, filename)
+    
+    logger.info(f"Attempting to serve legal docs file: {filename}")
+    logger.info(f"Legal docs directory: {legal_docs_dir}")
+    logger.info(f"Full file path: {file_path}")
+    logger.info(f"File exists: {os.path.exists(file_path)}")
+    
+    if not os.path.exists(legal_docs_dir):
+        logger.error(f"Legal documentation directory not found: {legal_docs_dir}")
+        return jsonify({'error': 'Legal documentation directory not found'}), 404
+    
+    if not os.path.exists(file_path):
+        logger.error(f"Legal file not found: {file_path}")
+        # List available files for debugging
+        if os.path.exists(legal_docs_dir):
+            available_files = os.listdir(legal_docs_dir)
+            logger.info(f"Available files in legal docs directory: {available_files}")
+        return jsonify({'error': f'Legal file not found: {filename}'}), 404
     
     try:
-        return send_from_directory(legal_docs_dir, filename)
-    except FileNotFoundError:
-        return jsonify({'error': f'Legal file not found: {filename}'}), 404
+        # Read file content and return as plain text for markdown files
+        if filename.endswith('.md'):
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return content, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+        else:
+            return send_from_directory(legal_docs_dir, filename)
+    except Exception as e:
+        logger.error(f"Error serving legal file {filename}: {str(e)}")
+        return jsonify({'error': f'Error reading legal file: {str(e)}'}), 500
+
+@app.route('/api/docs/list')
+def list_docs():
+    """List available documentation files"""
+    try:
+        docs_dir = get_docs_directory()
+        legal_docs_dir = get_legal_docs_directory()
+        
+        docs_files = []
+        legal_files = []
+        
+        if os.path.exists(docs_dir):
+            docs_files = [f for f in os.listdir(docs_dir) if os.path.isfile(os.path.join(docs_dir, f))]
+        
+        if os.path.exists(legal_docs_dir):
+            legal_files = [f for f in os.listdir(legal_docs_dir) if os.path.isfile(os.path.join(legal_docs_dir, f))]
+        
+        return jsonify({
+            'docs_directory': docs_dir,
+            'legal_docs_directory': legal_docs_dir,
+            'docs_files': docs_files,
+            'legal_files': legal_files,
+            'docs_dir_exists': os.path.exists(docs_dir),
+            'legal_dir_exists': os.path.exists(legal_docs_dir)
+        })
+    except Exception as e:
+        logger.error(f"Error listing docs: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/shutdown', methods=['POST'])
 def shutdown():
@@ -568,7 +907,7 @@ def main():
     app.run(
         host='127.0.0.1',
         port=args.port,
-        debug=False,
+        debug=True,
         use_reloader=False,
         threaded=True
     )

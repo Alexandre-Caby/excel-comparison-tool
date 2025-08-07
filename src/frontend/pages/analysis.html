@@ -1,0 +1,369 @@
+<!-- Analysis Page -->
+<div id="analysis-page" class="page">
+    <div class="page-header">
+        <h1>Analyse de Programme de Maintenance</h1>
+        <p>Analysez les programmes hebdomadaires avec données concaténées d'engins</p>
+    </div>
+
+    <!-- Add this right after the page-header section -->
+    <div class="help-section">
+        <div class="card">
+            <div class="card-header">
+                <h4>📊 Comment interpréter les résultats</h4>
+                <button class="info-toggle" data-target="interpretation-guide">ℹ️</button>
+            </div>
+            <div class="card-info" id="interpretation-guide">
+                <h5>Principes de calcul importants :</h5>
+                <ol>
+                    <li><strong>Jours d'immobilisation</strong> : Un jour calendaire où un engin est en maintenance.</li>
+                    <li><strong>Comptage unique</strong> : Si plusieurs opérations sont effectuées en parallèle sur un même engin le même jour, ce jour n'est compté qu'une seule fois.</li>
+                    <li><strong>RDV invalides</strong> : Les rendez-vous avec des dates manquantes ou incorrectes sont marqués comme invalides et exclus des calculs de durée.</li>
+                    <li><strong>Jours avec RDV</strong> : Nombre total de jours calendaires uniques où le site a au moins un engin en maintenance.</li>
+                    <li><strong>Heures d'immobilisation</strong> : Calculées comme Jours d'immobilisation × 24h.</li>
+                </ol>
+                
+                <h5>Exemple :</h5>
+                <p>Si un engin BB75000 a trois opérations distinctes prévues le 20/05/2025, l'analyse :</p>
+                <ul>
+                    <li>Compte 3 RDV distincts</li>
+                    <li>Mais compte seulement 1 jour d'immobilisation</li>
+                    <li>Ce qui donne 24h d'immobilisation (1 jour × 24h)</li>
+                </ul>
+                
+                <p>Cela reflète le fait que l'engin est indisponible une seule journée, même si plusieurs opérations sont programmées en parallèle.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="help-section">
+        <div class="card">
+            <div class="card-header">ℹ️ À propos de l'analyse PHP</div>
+            <div class="card-body">
+                <div class="help-content">
+                    <h4>Analyses spécifiques des fichiers PHP :</h4>
+                    <ul>
+                        <li><strong>Planning hebdomadaire :</strong> Analyse des résultats par semaine
+                        </li>
+                        <li><strong>Analyse des engins :</strong> Analyse des données spécifiques à chaque série d'engins
+                        </li>
+                        <li><strong>Sommaire des données :</strong> Fusion des données pour identification unique
+                        </li>
+                        <li><strong>Détection de conflits :</strong> Identification des Immobilisations excédentaires
+                        </li>
+                    </ul>
+
+                    <h4>Structure attendue :</h4>
+                    <p>En-têtes ligne 3</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Upload Section -->
+    <div class="upload-container">
+        <div class="upload-section">
+            <div class="card">
+                <div class="card-header">📁 Fichier à analyser</div>
+                <div class="card-body">
+                    <div class="file-upload-area" id="analysis-file-area">
+                        <div class="upload-prompt">
+                            <p><strong>Glissez-déposez votre fichier Excel ici</strong></p>
+                            <p>ou cliquez pour sélectionner</p>
+                            <input type="file" id="analysis-file-input" accept=".xlsx,.xls" style="display: none;">
+                        </div>
+                        <div class="upload-hint">
+                            Fichier avec en-têtes ligne 3<br>
+                            Formats : .xlsx, .xls
+                        </div>
+                    </div>
+
+                    <!-- File Information -->
+                    <div id="analysis-file-info" class="file-info" style="display: none;">
+                        <h4>Fichier sélectionné</h4>
+                        <div id="analysis-file-details"></div>
+                    </div>
+
+                    <!-- Sheet Selection -->
+                    <div id="analysis-sheet-selection" class="config-section" style="display: none;">
+                        <label for="analysis-sheet-select">Feuille à analyser :</label>
+                        <select id="analysis-sheet-select">
+                            <option value="">Sélectionner une feuille...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Configuration -->
+        <div class="upload-section">
+            <div class="card">
+                <div class="card-header">⚙️ Options d'analyse</div>
+                <div class="card-body">
+                    <!-- Analysis Type -->
+                    <div class="config-section">
+                        <label>Types d'analyses :</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="weekly-planning" checked>
+                                <label for="weekly-planning">Planning hebdomadaire</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="equipment-analysis" checked>
+                                <label for="equipment-analysis">Analyse des engins</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="concatenation-analysis" checked>
+                                <label for="concatenation-analysis">Données concaténées RDV</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="conflict-detection" checked>
+                                <label for="conflict-detection">Détection de conflits</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Week Selection -->
+                    <div class="config-section">
+                        <div class="form-group">
+                            <label for="analysis-week">Semaine à analyser :</label>
+                            <select id="analysis-week">
+                                <option value="all" selected>Toutes les semaines</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="config-actions">
+                        <button class="btn primary-btn" id="start-analysis-btn" disabled>
+                            🔍 Analyser
+                        </button>
+                        <button class="btn secondary-btn" id="reset-analysis-btn">
+                            🔄 Réinitialiser
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Progress -->
+    <div id="analysis-progress" class="progress-section" style="display: none;">
+        <div class="card">
+            <div class="card-header">Progression de l'analyse</div>
+            <div class="card-body">
+                <div class="progress">
+                    <div class="progress-bar" id="analysis-progress-bar" style="width: 0%"></div>
+                </div>
+                <p id="analysis-progress-text">Initialisation...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Results -->
+    <div id="analysis-results" class="results-section" style="display: none;">
+
+        <!-- Summary Metrics -->
+        <div class="php-metrics">
+            <div class="php-metric-card" data-tooltip="Nombre total de rendez-vous dans l'analyse">
+                <div class="php-metric-value" id="total-rdv">0</div>
+                <div class="php-metric-label">Total RDV</div>
+                <div class="metric-info">ℹ️</div>
+            </div>
+            <div class="php-metric-card" data-tooltip="Nombre de clients uniques identifiés">
+                <div class="php-metric-value" id="total-clients">0</div>
+                <div class="php-metric-label">Total Clients</div>
+                <div class="metric-info">ℹ️</div>
+            </div>
+            <div class="php-metric-card" data-tooltip="Nombre de séries d'engins différentes">
+                <div class="php-metric-value" id="total-equipment">0</div>
+                <div class="php-metric-label">Total de séries</div>
+                <div class="metric-info">ℹ️</div>
+            </div>
+            <div class="php-metric-card" data-tooltip="Somme des heures d'immobilisation de tous les engins - Plusieurs opérations peuvent être effectuées en parallèle sur un même engin">
+                <div class="php-metric-value" id="weekly-hours">0h</div>
+                <div class="php-metric-label">Total Heures</div>
+                <div class="metric-info">ℹ️</div>
+            </div>
+            <div class="php-metric-card" data-tooltip="Nombre de jours calendaires où le site a au moins un engin en maintenance">
+                <div class="php-metric-value" id="occupancy-rate">0</div>
+                <div class="php-metric-label">Jours avec RDV</div>
+                <div class="metric-info">ℹ️</div>
+            </div>
+            <div class="php-metric-card" data-tooltip="Nombre d'anomalies détectées (dates manquantes, inversées ou incohérentes)">
+                <div class="php-metric-value" id="conflict-count">0</div>
+                <div class="php-metric-label">Conflits</div>
+                <div class="metric-info">ℹ️</div>
+            </div>
+        </div>
+
+        <!-- Weekly Planning Analysis -->
+        <div id="weekly-section" class="analysis-section">
+            <div class="card">
+                <div class="card-header">
+                    <h4>📅 Planning hebdomadaire</h4>
+                    <button class="info-toggle" data-target="weekly-info">ℹ️</button>
+                </div>
+                <div class="card-info" id="weekly-info">
+                    <strong>Comment lire ce tableau :</strong>
+                    <ul>
+                        <li><strong>RDV :</strong> Nombre de rendez-vous programmés par semaine</li>
+                        <li><strong>Durée moy. RDV :</strong> Durée moyenne d'un RDV en heures</li>
+                        <li><strong>Immobilisation :</strong> Jours calendaires où les engins sont en maintenance. <em>Si plusieurs opérations ont lieu le même jour sur un même engin, ce jour n'est compté qu'une seule fois.</em></li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div id="weekly-content">
+                        <p class="no-data">Aucune donnée de planning disponible</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Equipment Analysis -->
+        <div id="equipment-section" class="analysis-section">
+            <div class="card">
+                <div class="card-header">
+                    <h4>🚂 Analyse des engins</h4>
+                    <button class="info-toggle" data-target="equipment-info">ℹ️</button>
+                </div>
+                <div class="card-info" id="equipment-info">
+                    <strong>Comment interpréter les résultats :</strong>
+                    <ul>
+                        <li><strong>RDV Total :</strong> Nombre total de rendez-vous programmés pour cet engin</li>
+                        <li><strong>RDV Valides/Invalides :</strong> Les RDV invalides ont des dates manquantes ou incorrectes et sont exclus des calculs de durée</li>
+                        <li><strong>Jours d'immobilisation :</strong> Nombre de jours calendaires distincts où l'engin est immobilisé</li>
+                        <li><strong>Heures d'immobilisation :</strong> Jours d'immobilisation × 24h</li>
+                        <li><strong>Durée moyenne :</strong> Heures totales ÷ Nombre de RDV valides</li>
+                    </ul>
+                    <p><em>Note : Si plusieurs opérations sont effectuées en parallèle sur un même engin le même jour, ce jour n'est compté qu'une seule fois dans le calcul des jours d'immobilisation.</em></p>
+                </div>
+                <div class="card-body">
+                    <div id="equipment-content">
+                        <p class="no-data">Aucune donnée d'engins disponible</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Concatenated Data Analysis -->
+        <div id="concatenation-section" class="analysis-section">
+            <div class="card">
+                <div class="card-header">
+                    <h4>🔗 Données concaténées RDV</h4>
+                    <div class="card-subtitle">Site_Engin_DateDébut_DateFin_Client</div>
+                    <button class="info-toggle" data-target="concat-info">ℹ️</button>
+                </div>
+                <div class="card-info" id="concat-info">
+                    <strong>À propos des données concaténées :</strong>
+                    <ul>
+                        <li>Chaque ligne représente un rendez-vous de maintenance unique</li>
+                        <li>Les dates sont au format AAAAMMJJ_HHMM</li>
+                        <li>Les jours sont calculés en prenant compte de la date de début et de fin (incluses)</li>
+                        <li>Les heures sont calculées comme Jours × 24h</li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="filters-section">
+                        <div class="filters-container">
+                            <div class="filter-group">
+                                <label for="concat-filter-client">Client :</label>
+                                <select id="concat-filter-client" class="form-control">
+                                    <option value="">Tous les clients</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="concat-filter-engin">Série :</label>
+                                <select id="concat-filter-engin" class="form-control">
+                                    <option value="">Toutes les séries</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="concat-filter-date">Date :</label>
+                                <div class="date-input-group">
+                                    <input type="date" id="concat-filter-date" class="form-control">
+                                </div>
+                            </div>
+                            <div class="filter-group">
+                                <label>&nbsp;</label>
+                                <div class="filter-buttons">
+                                    <button id="apply-concat-filter" class="btn primary-btn btn-sm">Appliquer</button>
+                                    <button id="clear-concat-filter" class="btn secondary-btn btn-sm">Effacer</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="concatenation-content">
+                        <p class="no-data">Aucune donnée concaténée disponible</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conflict Detection -->
+        <div id="conflicts-section" class="analysis-section">
+            <div class="card">
+                <div class="card-header">
+                    <h4>⚠️ Conflits détectés</h4>
+                    <button class="info-toggle" data-target="conflicts-info">ℹ️</button>
+                </div>
+                <div class="card-info" id="conflicts-info">
+                    <strong>Types de conflits détectés :</strong>
+                    <ul>
+                        <li><strong>Date début manquante :</strong> L'engin n'est peut-être pas encore sur site</li>
+                        <li><strong>Date fin manquante :</strong> L'entretien n'est peut-être pas encore défini</li>
+                        <li><strong>Inversion de dates :</strong> La date de fin est antérieure à la date de début</li>
+                        <li><strong>Immobilisation excessive :</strong> Période d'immobilisation anormalement longue (>1000 jours)</li>
+                    </ul>
+                    <p><em>Les conflits de même type sur un même engin sont groupés pour plus de clarté.</em></p>
+                </div>
+                <div class="card-body">
+                    <div id="conflicts-content">
+                        <p class="no-data">Aucun conflit détecté</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Section -->
+        <div class="export-section">
+            <div class="card">
+                <div class="card-header">💾 Export de l'analyse</div>
+                <div class="card-body">
+                    <div class="export-controls">
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="export-summary" checked>
+                                <label for="export-summary">Résumé</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="export-concatenated" checked>
+                                <label for="export-concatenated">Données concaténées</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="export-conflicts" checked>
+                                <label for="export-conflicts">Liste des conflits</label>
+                            </div>
+                        </div>
+
+                        <div class="radio-group">
+                            <label><input type="radio" name="analysis-export-format" value="excel" checked> Excel (.xlsx)</label>
+                            <label><input type="radio" name="analysis-export-format" value="csv"> CSV</label>
+                            <label><input type="radio" name="analysis-export-format" value="pdf"> PDF</label>
+                        </div>
+
+                        <div class="filename-input">
+                            <label for="analysis-export-filename">Nom du fichier :</label>
+                            <input type="text" id="analysis-export-filename" placeholder="analyse_maintenance">
+                        </div>
+
+                        <div class="export-actions">
+                            <button class="btn primary-btn" id="export-analysis-btn" disabled>
+                                💾 Exporter l'Analyse
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

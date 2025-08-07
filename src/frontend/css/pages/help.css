@@ -3,11 +3,10 @@
 .help-card {
     background-color: white;
     border-radius: 16px;
-    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-light);
     margin-bottom: 2.5rem;
     overflow: hidden;
-    border: 1px solid rgba(226, 232, 240, 0.8);
-    transition: all 0.3s ease;
+    border: 1px solid var(--border-light);
 }
 
 .help-body {
@@ -19,20 +18,18 @@
 
 /* Table of contents styling */
 .toc-container {
-    background: linear-gradient(135deg, rgba(0, 113, 71, 0.02) 0%, rgba(0, 113, 71, 0.08) 100%);
-    border-radius: 12px;
+    background: linear-gradient(135deg, var(--vert-rle-10) 0%, rgba(0, 113, 71, 0.08) 100%);
+    border-radius: var(--radius-lg);
     padding: 1.5rem 2rem;
     margin-bottom: 2rem;
     border: 1px solid rgba(0, 113, 71, 0.1);
 }
 
 .toc-container h2 {
-    color: #007147;
+    color: var(--primary);
     font-weight: 600;
     margin-bottom: 1rem;
     font-size: 1.4rem;
-    border-bottom: 2px solid rgba(0, 113, 71, 0.1);
-    padding-bottom: 0.75rem;
 }
 
 .toc-list {
@@ -43,37 +40,36 @@
 
 .toc-item {
     margin-bottom: 0.5rem;
-    transition: transform 0.2s ease;
 }
 
 .toc-level-1 {
+    margin-left: 0;
     font-weight: 600;
 }
 
 .toc-level-2 {
-    padding-left: 1.5rem;
+    margin-left: 1.5rem;
     font-weight: 500;
 }
 
 .toc-level-3 {
-    padding-left: 3rem;
+    margin-left: 3rem;
     font-weight: 400;
     font-size: 0.95rem;
 }
 
 .toc-link {
-    color: #007147;
+    color: var(--primary);
     text-decoration: none;
     display: block;
     padding: 0.4rem 0.75rem;
-    border-radius: 6px;
-    transition: all 0.2s ease;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
 }
 
 .toc-link:hover {
     background-color: rgba(0, 113, 71, 0.08);
     color: #005a38;
-    transform: translateX(5px);
     text-decoration: none;
 }
 
@@ -83,9 +79,8 @@
 }
 
 .help-heading {
-    color: #007147;
+    color: var(--primary);
     margin: 1.5rem 0 1rem;
-    padding-bottom: 0.5rem;
     scroll-margin-top: 2rem; /* For smooth scrolling */
 }
 
@@ -93,24 +88,30 @@
     font-size: 1.8rem;
     border-bottom: 2px solid rgba(0, 113, 71, 0.1);
     padding-bottom: 0.75rem;
-    margin-top: 2.5rem;
+    margin-bottom: 1.5rem;
 }
 
 .help-h2 {
     font-size: 1.5rem;
-    color: #007147;
     margin-top: 2rem;
+    color: #2d3748;
 }
 
 .help-h3 {
     font-size: 1.2rem;
-    color: #333333;
-    margin-top: 1.5rem;
+    color: #4a5568;
+}
+
+.help-h4 {
+    font-size: 1.1rem;
+    color: #718096;
+    font-weight: 600;
 }
 
 .help-paragraph {
     margin-bottom: 1.25rem;
     line-height: 1.8;
+    text-align: justify;
 }
 
 .help-list {
@@ -124,15 +125,45 @@
 }
 
 .help-link {
-    color: #007147;
+    color: var(--primary);
     text-decoration: underline;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: color var(--transition-fast);
 }
 
 .help-link:hover {
     color: #005a38;
-    text-decoration: underline;
+}
+
+/* Code styling */
+.help-code {
+    background-color: #f7fafc;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    color: #2d3748;
+    border: 1px solid #e2e8f0;
+}
+
+.help-code-block {
+    background-color: #2d3748;
+    color: #e2e8f0;
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    border: 1px solid #4a5568;
+}
+
+.help-code-block code {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: inherit;
 }
 
 /* Section dividers */
@@ -143,6 +174,46 @@
     background: linear-gradient(90deg, rgba(0, 113, 71, 0.2) 0%, rgba(0, 113, 71, 0) 100%);
     margin-bottom: 1rem;
     width: 100%;
+}
+
+/* Special callout boxes */
+.help-note {
+    background-color: #ebf8ff;
+    border-left: 4px solid #3182ce;
+    padding: 1rem 1.5rem;
+    margin: 1.5rem 0;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.help-warning {
+    background-color: #fffbeb;
+    border-left: 4px solid #f59e0b;
+    padding: 1rem 1.5rem;
+    margin: 1.5rem 0;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.help-tip {
+    background-color: #f0fff4;
+    border-left: 4px solid #10b981;
+    padding: 1rem 1.5rem;
+    margin: 1.5rem 0;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+/* Error styling */
+.error-box {
+    background-color: #fed7d7;
+    border: 1px solid #feb2b2;
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    text-align: center;
+    color: #742a2a;
+}
+
+.error-box h3 {
+    color: #c53030;
+    margin-bottom: 1rem;
 }
 
 /* Print styles for help content */
@@ -165,6 +236,17 @@
     .help-list {
         break-inside: avoid;
     }
+    
+    .help-card {
+        box-shadow: none;
+        border: 1px solid #ccc;
+    }
+    
+    .help-code-block {
+        background-color: #f5f5f5;
+        color: #000;
+        border: 1px solid #ccc;
+    }
 }
 
 /* Loading state */
@@ -173,10 +255,50 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 5rem 0;
-    color: #64748b;
+    padding: 3rem;
+    color: var(--text-secondary);
+}
+
+.loading-spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 3px solid #e2e8f0;
+    border-top: 3px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 .doc-container {
-    min-height: 500px;
+    position: relative;
+    min-height: 300px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .help-body {
+        padding: 1.5rem;
+    }
+    
+    .toc-container {
+        padding: 1rem 1.5rem;
+    }
+    
+    .toc-level-2 {
+        margin-left: 1rem;
+    }
+    
+    .toc-level-3 {
+        margin-left: 2rem;
+    }
+    
+    .help-code-block {
+        padding: 0.75rem 1rem;
+        font-size: 0.8rem;
+    }
 }

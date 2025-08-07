@@ -7,9 +7,7 @@
     line-height: 1.5;
     text-align: center;
     text-decoration: none;
-    vertical-align: middle;
     cursor: pointer;
-    user-select: none;
     background-color: transparent;
     border: 1px solid transparent;
     padding: var(--spacing-sm) var(--spacing-md);
@@ -29,7 +27,7 @@
     pointer-events: none;
 }
 
-/* Button variants */
+/* Primary button */
 .primary-btn {
     color: var(--white);
     background-color: var(--primary);
@@ -40,9 +38,9 @@
     background-color: #005a38;
     border-color: #005a38;
     transform: translateY(-1px);
-    box-shadow: var(--shadow-medium);
 }
 
+/* Secondary button */
 .secondary-btn {
     color: var(--text-primary);
     background-color: var(--white);
@@ -52,43 +50,6 @@
 .secondary-btn:hover:not(:disabled) {
     background-color: var(--gray-100);
     border-color: var(--gray-400);
-    transform: translateY(-1px);
-}
-
-.success-btn {
-    color: var(--white);
-    background-color: var(--success);
-    border-color: var(--success);
-}
-
-.success-btn:hover:not(:disabled) {
-    background-color: #228b22;
-    border-color: #228b22;
-    transform: translateY(-1px);
-}
-
-.warning-btn {
-    color: var(--black);
-    background-color: var(--warning);
-    border-color: var(--warning);
-}
-
-.warning-btn:hover:not(:disabled) {
-    background-color: #e6be00;
-    border-color: #e6be00;
-    transform: translateY(-1px);
-}
-
-.error-btn {
-    color: var(--white);
-    background-color: var(--error);
-    border-color: var(--error);
-}
-
-.error-btn:hover:not(:disabled) {
-    background-color: #c41e1e;
-    border-color: #c41e1e;
-    transform: translateY(-1px);
 }
 
 /* Button sizes */
@@ -155,6 +116,52 @@
 }
 
 .btn-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Icon buttons */
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+}
+
+.btn-icon-only {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    min-width: auto;
+}
+
+/* Floating action button */
+.btn-fab {
+    position: fixed;
+    bottom: var(--spacing-lg);
+    right: var(--spacing-lg);
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    box-shadow: var(--shadow-heavy);
+    z-index: 1000;
+    min-width: auto;
+}
+
+.btn-fab:hover:not(:disabled) {
+    transform: scale(1.1);
+}
+
+.btn-fab::after {
     content: '';
     position: absolute;
     top: 50%;
