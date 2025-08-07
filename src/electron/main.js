@@ -50,7 +50,8 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      webSecurity: true
+      webSecurity: true,
+      devTools: true
     },
     icon: path.join(__dirname, '../frontend/images/icon_excel_comparison.ico'),
     show: false,
@@ -61,40 +62,68 @@ function createWindow() {
     minHeight: 800
   });
 
-  // Start Python backend first
-  startPythonServer();
+    // Add keyboard shortcut to open developer tools
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.control && input.shift && input.key.toLowerCase() === 'i') {
+      mainWindow.webContents.toggleDevTools();
+    }
+    // Also allow F12
+    if (input.key === 'F12') {
+      mainWindow.webContents.toggleDevTools();
+    }
+  });
 
-  // Show loading page immediately
-  mainWindow.loadFile(path.join(__dirname, '../frontend/index.html')).catch(() => {
-    console.error('Failed to load application file');
-    showError('Failed to load application');
+  // Show loading screen immediately
+  mainWindow.loadFile(path.join(__dirname, '../frontend/loading.html')).catch(() => {
+    console.error('Failed to load loading screen');
   });
   
   mainWindow.show();
 
-  // Wait for backend and then set up the frontend properly
-  waitForBackend().then((port) => {
-    console.log(`Backend ready on port ${port}`);
-    
-    // Set the backend URL in the renderer process
-    mainWindow.webContents.executeJavaScript(`
-      window.BACKEND_URL = 'http://localhost:${port}';
-      console.log('Backend URL set to:', window.BACKEND_URL);
-      
-      // Dispatch a custom event to notify that backend is ready
-      window.dispatchEvent(new CustomEvent('backendReady', { 
-        detail: { backendUrl: 'http://localhost:${port}' } 
-      }));
-    `).then(() => {
-      console.log('Backend URL successfully set in renderer');
-    }).catch((error) => {
-      console.error('Failed to set backend URL in renderer:', error);
-    });
+  // Start Python backend
+  startPythonServer();
 
-  }).catch((error) => {
-    console.error('Backend failed to start:', error);
-    showError(`Backend failed to start: ${error.message}`);
-  });
+  // Show clearer startup progress
+  let startupProgress = 0;
+  const startupInterval = setInterval(() => {
+    if (startupProgress < 90) {
+      startupProgress += 5;
+      mainWindow.webContents.executeJavaScript(`
+        document.getElementById('progress-bar').style.width = '${startupProgress}%';
+        document.getElementById('status-message').innerText = 'Démarrage du serveur en cours...';
+      `);
+    }
+  }, 300);
+
+  // Wait for backend with better timeout handling
+  waitForBackend()
+      .then((port) => {
+          clearInterval(startupInterval);
+          console.log(`Backend ready on port ${port}`);
+          
+          mainWindow.webContents.executeJavaScript(`
+            document.getElementById('progress-bar').style.width = '100%';
+            document.getElementById('status-message').innerText = 'Chargement de l\'application...';
+          `);
+
+          // Set the backend URL and load the main app
+          setTimeout(() => {
+              mainWindow.loadFile(path.join(__dirname, '../frontend/index.html')).then(() => {
+                  mainWindow.webContents.executeJavaScript(`
+                    window.BACKEND_URL = 'http://localhost:${port}';
+                    console.log('Backend URL set to:', window.BACKEND_URL);
+                    window.dispatchEvent(new CustomEvent('backendReady', { 
+                        detail: { backendUrl: 'http://localhost:${port}' } 
+                    }));
+                  `);
+              });
+          }, 500);
+      })
+      .catch((error) => {
+          clearInterval(startupInterval);
+          console.error('Backend failed to start:', error);
+          showError(`Impossible de démarrer le serveur: ${error.message}`);
+      });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
