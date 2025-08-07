@@ -292,25 +292,28 @@
             loadUserGuide();
         }
         
+        // Wait for window.BACKEND_URL to be available
+        function waitForBackendUrl() {
+            if (window.BACKEND_URL) {
+                console.log('Backend URL available for help page:', window.BACKEND_URL);
+                initializeHelp();
+            } else {
+                console.log('Waiting for backend URL...');
+                setTimeout(waitForBackendUrl, 100);
+            }
+        }
+        
         // Listen for backend ready event (from Electron)
         window.addEventListener('backendReady', (event) => {
-            console.log('Backend ready event received:', event.detail);
+            console.log('Backend ready event received for help page:', event.detail);
             initializeHelp();
         });
         
-        // Also try to load immediately if backend URL is already available
-        if (window.BACKEND_URL || document.readyState === 'complete') {
-            console.log('Backend URL already available or DOM ready, loading help immediately');
-            initializeHelp();
-        } else if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                console.log('DOM content loaded, checking for backend...');
-                // Give a short delay for Electron to set the backend URL
-                setTimeout(initializeHelp, 100);
-            });
+        // Start waiting for backend URL
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', waitForBackendUrl);
         } else {
-            // Fallback - try to load after a short delay
-            setTimeout(initializeHelp, 500);
+            waitForBackendUrl();
         }
     })();
 </script>
