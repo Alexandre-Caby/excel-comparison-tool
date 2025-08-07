@@ -164,88 +164,60 @@ function createWindow() {
   // Wait for backend with better error handling
   waitForBackend()
     .then(async (port) => {
-      clearInterval(startupInterval);
-      console.log(`Backend ready on port ${port}`);
-      
-      // Update progress to 100%
-      await safeExecuteJS(`
-        try {
-          const progressBar = document.getElementById('progress-bar');
-          const statusMessage = document.getElementById('status-message');
-          if (progressBar) progressBar.style.width = '100%';
-          if (statusMessage) statusMessage.innerText = 'Chargement de l\'application...';
-        } catch (e) {
-          console.warn('Final progress update failed:', e);
-        }
-      `);
-
-      // Load the main application
-      setTimeout(async () => {
-        try {
-          await mainWindow.loadFile(path.join(__dirname, '../frontend/index.html'));
-          console.log('Main application loaded successfully');
-          
-          // Wait for DOM to be ready
-          await waitForDOMReady();
-          
-          // Set backend URL with proper error handling
-          const backendScript = `
+        clearInterval(startupInterval);
+        console.log(`Backend ready on port ${port}`);
+        
+        // Update progress to 100%
+        await safeExecuteJS(`
             try {
-              window.BACKEND_URL = 'http://localhost:${port}';
-              console.log('Backend URL set to:', window.BACKEND_URL);
-              
-              // Set a flag to indicate backend is ready
-              window.BACKEND_READY = true;
-              
-              // Dispatch event after a short delay
-              setTimeout(() => {
-                try {
-                  if (typeof CustomEvent !== 'undefined') {
-                    const event = new CustomEvent('backendReady', { 
-                      detail: { backendUrl: 'http://localhost:${port}' } 
-                    });
-                    window.dispatchEvent(event);
-                    console.log('Backend ready event dispatched successfully');
-                  } else {
-                    console.warn('CustomEvent not available');
-                  }
-                } catch (eventError) {
-                  console.error('Error dispatching backend ready event:', eventError);
-                }
-              }, 500);
-              
-              true; // Return success
-            } catch (error) {
-              console.error('Error in backend setup script:', error);
-              false; // Return failure
+                const progressBar = document.getElementById('progress-bar');
+                const statusMessage = document.getElementById('status-message');
+                if (progressBar) progressBar.style.width = '100%';
+                if (statusMessage) statusMessage.innerText = 'Chargement de l\'application...';
+            } catch (e) {
+                console.warn('Final progress update failed:', e);
             }
-          `;
-          
-          const fallbackScript = `
-            window.BACKEND_URL = 'http://localhost:${port}';
-            window.BACKEND_READY = true;
-            console.log('Fallback: Backend URL set');
-            true;
-          `;
-          
-          const success = await safeExecuteJS(backendScript, fallbackScript);
-          
-          if (success) {
-            console.log('Backend URL setup completed successfully');
-          } else {
-            console.warn('Backend URL setup may have failed, but continuing...');
-          }
-          
-        } catch (loadError) {
-          console.error('Error loading main HTML file:', loadError);
-          await showError('Failed to load application interface');
-        }
-      }, 500);
+        `);
+
+        // Create a global backend URL variable that will be exposed to renderer
+        global.BACKEND_URL = `http://localhost:${port}`;
+        
+        // Load the main application with simplified approach
+        setTimeout(() => {
+            try {
+                mainWindow.loadFile(path.join(__dirname, '../frontend/index.html'))
+                    .then(() => {
+                        console.log('Main application loaded successfully');
+                        
+                        // Inject the backend URL directly - simpler approach
+                        mainWindow.webContents.executeJavaScript(`
+                            window.BACKEND_URL = 'http://localhost:${port}';
+                            console.log('Backend URL set to:', window.BACKEND_URL);
+                            
+                            // Set a flag to indicate backend is ready
+                            localStorage.setItem('backendUrl', 'http://localhost:${port}');
+                            localStorage.setItem('backendReady', 'true');
+                            
+                            // No complex event system, just a simple global
+                            true;
+                        `).catch(err => {
+                            console.error('Failed to set backend URL:', err);
+                        });
+                    })
+                    .catch((loadError) => {
+                        console.error('Error loading main HTML file:', loadError);
+                        showError('Failed to load application interface');
+                    });
+            } catch (error) {
+                console.error('Error during app initialization:', error);
+                showError('Failed to initialize application');
+            }
+        }, 500);
     })
     .catch(async (error) => {
-      clearInterval(startupInterval);
-      console.error('Backend failed to start:', error);
-      await showError(`Impossible de démarrer le serveur: ${error.message}`);
+        clearInterval(startupInterval);
+        console.error('Backend failed to start:', error);
+        await showError(`Impossible de démarrer le serveur: ${error.message}`);
     });
 
   mainWindow.on('closed', () => {

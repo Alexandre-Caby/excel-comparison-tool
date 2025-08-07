@@ -159,38 +159,36 @@
         'license': 'licence.md'
     };
     
-    // Function to load legal document using API
-    async function loadDocument(docType) {
-        legalContent.innerHTML = `
-            <div class="loading-docs">
-                <div class="loading-spinner"></div>
-                <p>Chargement du document...</p>
-            </div>
-        `;
-        
-        const filename = fileMap[docType];
-        const fallback = fallbackContent[docType];
-        
-        // Only try to load from backend if API and backend URL are available
-        if (window.api && window.BACKEND_URL && filename) {
-            try {
-                console.log(`Loading legal document ${filename} via API...`);
-                const markdown = await window.api.loadLegalDocument(filename);
-                const html = window.api.markdownToHtml(markdown);
-                
-                showContent(html);
-                console.log(`Legal document ${filename} loaded successfully via API`);
-                return;
-                
-            } catch (error) {
-                console.log('API loading failed, using fallback content:', error.message);
+     function loadDocument(docType) {
+        try {
+            console.log(`Loading ${docType} document...`);
+            
+            // Always set fallback content immediately
+            showContent(fallbackContent[docType]);
+
+            if (window.api && window.BACKEND_URL) {
+                const filename = fileMap[docType];
+                if (filename) {
+                    console.log(`API available, attempting to load ${filename} from backend...`);
+                    
+                    // Just attempt this in the background
+                    window.api.loadLegalDocument(filename)
+                        .then(markdown => {
+                            if (markdown && markdown.trim()) {
+                                const html = window.api.markdownToHtml(markdown);
+                                showContent(html);
+                                console.log(`${docType} document loaded from backend`);
+                            }
+                        })
+                        .catch(error => {
+                            console.log(`Using fallback content for ${docType} due to API error:`, error.message);
+                        });
+                }
             }
-        } else {
-            console.log('API or backend URL not available, using fallback content');
+        } catch (error) {
+            console.error(`Error in ${docType} document loading:`, error);
+            showContent(fallbackContent[docType]);
         }
-        
-        // Use fallback content
-        showContent(fallback);
     }
     
     function showContent(htmlContent) {
@@ -206,54 +204,15 @@
     // Set up tab functionality
     document.querySelectorAll('.legal-tab').forEach(tab => {
         tab.addEventListener('click', () => {
-            // Remove active class from all tabs
             document.querySelectorAll('.legal-tab').forEach(t => t.classList.remove('active'));
-            
-            // Add active class to clicked tab
             tab.classList.add('active');
-            
-            // Load the selected document
             const docType = tab.getAttribute('data-doc');
             currentDoc = docType;
             loadDocument(docType);
         });
     });
     
-    // Initialize legal page
-    function initializeLegal() {
-        loadDocument(currentDoc);
-    }
-    
-    // Load content when ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializeLegal);
-    } else {
-        initializeLegal();
-    }
-    
-    // Listen for backend ready event
-    window.addEventListener('backendReady', () => {
-        console.log('Backend ready event received for legal page');
-        loadDocument(currentDoc);
-    });
-    
-    // Check periodically if API becomes available
-    let apiCheckInterval = setInterval(() => {
-        if (window.api && window.BACKEND_URL && legalContent.innerHTML.includes('Chargement du document')) {
-            clearInterval(apiCheckInterval);
-            loadDocument(currentDoc);
-        }
-    }, 500);
-    
-    // Stop checking after 10 seconds and show fallback
-    setTimeout(() => {
-        clearInterval(apiCheckInterval);
-        if (legalContent.innerHTML.includes('Chargement du document')) {
-            const fallback = fallbackContent[currentDoc];
-            if (fallback) {
-                showContent(fallback);
-            }
-        }
-    }, 10000);
+    // Execute immediately, don't wait for events
+    loadDocument(currentDoc);
 })();
 </script>
