@@ -23,146 +23,144 @@
     
     // Fallback content for each document
     const fallbackContent = {
-        terms: {
-            title: 'Conditions d\'utilisation',
-            content: `
-                <h1>Conditions d'utilisation - ECT Technis</h1>
-                
-                <h2>1. Acceptation des conditions</h2>
-                <p>En utilisant ECT Technis, vous acceptez les présentes conditions d'utilisation.</p>
-                
-                <h2>2. Description du service</h2>
-                <p>ECT Technis est un outil de comparaison de fichiers Excel conçu pour :</p>
-                <ul>
-                    <li>Comparer des données entre différents fichiers Excel</li>
-                    <li>Générer des rapports de différences</li>
-                    <li>Analyser les données PHP</li>
-                    <li>Exporter les résultats dans différents formats</li>
-                </ul>
-                
-                <h2>3. Utilisation autorisée</h2>
-                <p>Vous pouvez utiliser ECT Technis pour :</p>
-                <ul>
-                    <li>L'analyse de données professionnelles</li>
-                    <li>La comparaison de fichiers Excel</li>
-                    <li>La génération de rapports</li>
-                </ul>
-                
-                <h2>4. Restrictions</h2>
-                <ul>
-                    <li>Ne pas redistribuer le logiciel sans autorisation</li>
-                    <li>Ne pas modifier le code source</li>
-                    <li>Utilisation limitée aux besoins légitimes</li>
-                </ul>
-                
-                <h2>5. Responsabilité</h2>
-                <p>L'utilisateur est responsable de :</p>
-                <ul>
-                    <li>La validité des données traitées</li>
-                    <li>La sauvegarde de ses fichiers</li>
-                    <li>L'utilisation conforme du logiciel</li>
-                </ul>
-                
-                <h2>6. Support</h2>
-                <p>Le support technique est disponible pendant les heures ouvrables.</p>
-                
-                <h2>7. Modifications</h2>
-                <p>Ces conditions peuvent être modifiées. Les utilisateurs seront informés des changements importants.</p>
-                
-                <p><em>Dernière mise à jour : Janvier 2025</em></p>
-            `
-        },
-        privacy: {
-            title: 'Politique de confidentialité',
-            content: `
-                <h1>Politique de confidentialité - ECT Technis</h1>
-                
-                <h2>1. Collecte des données</h2>
-                <p>ECT Technis ne collecte aucune donnée personnelle. L'application fonctionne localement sur votre ordinateur.</p>
-                
-                <h2>2. Traitement des fichiers</h2>
-                <p>Vos fichiers Excel sont traités localement :</p>
-                <ul>
-                    <li>Aucune donnée n'est envoyée vers des serveurs externes</li>
-                    <li>Les fichiers temporaires sont supprimés automatiquement</li>
-                    <li>Aucune sauvegarde n'est effectuée sans votre accord</li>
-                </ul>
-                
-                <h2>3. Données temporaires</h2>
-                <p>L'application peut créer des fichiers temporaires pour :</p>
-                <ul>
-                    <li>Le traitement des comparaisons</li>
-                    <li>La génération de rapports</li>
-                    <li>Le cache des résultats</li>
-                </ul>
-                <p>Ces fichiers sont automatiquement supprimés à la fermeture de l'application.</p>
-                
-                <h2>4. Logs d'application</h2>
-                <p>L'application peut créer des logs techniques pour :</p>
-                <ul>
-                    <li>Le débogage</li>
-                    <li>L'amélioration des performances</li>
-                    <li>La résolution de problèmes</li>
-                </ul>
-                <p>Ces logs ne contiennent pas de données sensibles de vos fichiers.</p>
-                
-                <h2>5. Sécurité</h2>
-                <p>Nous nous engageons à :</p>
-                <ul>
-                    <li>Protéger l'intégrité de vos données</li>
-                    <li>Ne pas accéder à vos fichiers sans autorisation</li>
-                    <li>Maintenir la confidentialité de vos informations</li>
-                </ul>
-                
-                <h2>6. Contact</h2>
-                <p>Pour toute question concernant cette politique, contactez le support technique.</p>
-                
-                <p><em>Dernière mise à jour : Janvier 2025</em></p>
-            `
-        },
-        license: {
-            title: 'Licence',
-            content: `
-                <h1>Licence - ECT Technis</h1>
-                
-                <h2>Licence d'utilisation</h2>
-                <p>ECT Technis est fourni sous licence propriétaire limitée.</p>
-                
-                <h2>Droits accordés</h2>
-                <p>Cette licence vous accorde le droit de :</p>
-                <ul>
-                    <li>Utiliser le logiciel à des fins professionnelles</li>
-                    <li>Installer l'application sur vos ordinateurs</li>
-                    <li>Créer des sauvegardes pour usage personnel</li>
-                </ul>
-                
-                <h2>Restrictions</h2>
-                <ul>
-                    <li>Redistribution interdite sans autorisation écrite</li>
-                    <li>Modification du code source interdite</li>
-                    <li>Utilisation limitée aux besoins légitimes</li>
-                    <li>Pas de rétroingénierie autorisée</li>
-                </ul>
-                
-                <h2>Propriété intellectuelle</h2>
-                <p>Tous les droits de propriété intellectuelle sur ECT Technis sont réservés.</p>
-                
-                <h2>Garantie</h2>
-                <p>Le logiciel est fourni "en l'état" sans garantie explicite ou implicite.</p>
-                
-                <h2>Limitation de responsabilité</h2>
-                <p>En aucun cas nous ne pourrons être tenus responsables de dommages directs ou indirects résultant de l'utilisation du logiciel.</p>
-                
-                <h2>Résiliation</h2>
-                <p>Cette licence prend fin automatiquement en cas de non-respect des conditions.</p>
-                
-                <p><em>Version de licence : 1.0 - Janvier 2025</em></p>
-            `
-        }
+        terms: `
+            <h1>Conditions d'utilisation - ECT Technis</h1>
+            
+            <h2>1. Acceptation des conditions</h2>
+            <p>En utilisant ECT Technis, vous acceptez les présentes conditions d'utilisation.</p>
+            
+            <h2>2. Description du service</h2>
+            <p>ECT Technis est un outil de comparaison de fichiers Excel conçu pour :</p>
+            <ul>
+                <li>Comparer des données entre différents fichiers Excel</li>
+                <li>Générer des rapports de différences</li>
+                <li>Analyser les données PHP</li>
+                <li>Exporter les résultats dans différents formats</li>
+            </ul>
+            
+            <h2>3. Utilisation autorisée</h2>
+            <p>Vous pouvez utiliser ECT Technis pour :</p>
+            <ul>
+                <li>L'analyse de données professionnelles</li>
+                <li>La comparaison de fichiers Excel</li>
+                <li>La génération de rapports</li>
+            </ul>
+            
+            <h2>4. Restrictions</h2>
+            <ul>
+                <li>Ne pas redistribuer le logiciel sans autorisation</li>
+                <li>Ne pas modifier le code source</li>
+                <li>Utilisation limitée aux besoins légitimes</li>
+            </ul>
+            
+            <h2>5. Responsabilité</h2>
+            <p>L'utilisateur est responsable de :</p>
+            <ul>
+                <li>La validité des données traitées</li>
+                <li>La sauvegarde de ses fichiers</li>
+                <li>L'utilisation conforme du logiciel</li>
+            </ul>
+            
+            <h2>6. Support</h2>
+            <p>Le support technique est disponible pendant les heures ouvrables.</p>
+            
+            <h2>7. Modifications</h2>
+            <p>Ces conditions peuvent être modifiées. Les utilisateurs seront informés des changements importants.</p>
+            
+            <p><em>Dernière mise à jour : Janvier 2025</em></p>
+        `,
+        privacy: `
+            <h1>Politique de confidentialité - ECT Technis</h1>
+            
+            <h2>1. Collecte des données</h2>
+            <p>ECT Technis ne collecte aucune donnée personnelle. L'application fonctionne localement sur votre ordinateur.</p>
+            
+            <h2>2. Traitement des fichiers</h2>
+            <p>Vos fichiers Excel sont traités localement :</p>
+            <ul>
+                <li>Aucune donnée n'est envoyée vers des serveurs externes</li>
+                <li>Les fichiers temporaires sont supprimés automatiquement</li>
+                <li>Aucune sauvegarde n'est effectuée sans votre accord</li>
+            </ul>
+            
+            <h2>3. Données temporaires</h2>
+            <p>L'application peut créer des fichiers temporaires pour :</p>
+            <ul>
+                <li>Le traitement des comparaisons</li>
+                <li>La génération de rapports</li>
+                <li>Le cache des résultats</li>
+            </ul>
+            <p>Ces fichiers sont automatiquement supprimés à la fermeture de l'application.</p>
+            
+            <h2>4. Logs d'application</h2>
+            <p>L'application peut créer des logs techniques pour :</p>
+            <ul>
+                <li>Le débogage</li>
+                <li>L'amélioration des performances</li>
+                <li>La résolution de problèmes</li>
+            </ul>
+            <p>Ces logs ne contiennent pas de données sensibles de vos fichiers.</p>
+            
+            <h2>5. Sécurité</h2>
+            <p>Nous nous engageons à :</p>
+            <ul>
+                <li>Protéger l'intégrité de vos données</li>
+                <li>Ne pas accéder à vos fichiers sans autorisation</li>
+                <li>Maintenir la confidentialité de vos informations</li>
+            </ul>
+            
+            <h2>6. Contact</h2>
+            <p>Pour toute question concernant cette politique, contactez le support technique.</p>
+            
+            <p><em>Dernière mise à jour : Janvier 2025</em></p>
+        `,
+        license: `
+            <h1>Licence - ECT Technis</h1>
+            
+            <h2>Licence d'utilisation</h2>
+            <p>ECT Technis est fourni sous licence propriétaire limitée.</p>
+            
+            <h2>Droits accordés</h2>
+            <p>Cette licence vous accorde le droit de :</p>
+            <ul>
+                <li>Utiliser le logiciel à des fins professionnelles</li>
+                <li>Installer l'application sur vos ordinateurs</li>
+                <li>Créer des sauvegardes pour usage personnel</li>
+            </ul>
+            
+            <h2>Restrictions</h2>
+            <ul>
+                <li>Redistribution interdite sans autorisation écrite</li>
+                <li>Modification du code source interdite</li>
+                <li>Utilisation limitée aux besoins légitimes</li>
+                <li>Pas de rétroingénierie autorisée</li>
+            </ul>
+            
+            <h2>Propriété intellectuelle</h2>
+            <p>Tous les droits de propriété intellectuelle sur ECT Technis sont réservés.</p>
+            
+            <h2>Garantie</h2>
+            <p>Le logiciel est fourni "en l'état" sans garantie explicite ou implicite.</p>
+            
+            <h2>Limitation de responsabilité</h2>
+            <p>En aucun cas nous ne pourrons être tenus responsables de dommages directs ou indirects résultant de l'utilisation du logiciel.</p>
+            
+            <h2>Résiliation</h2>
+            <p>Cette licence prend fin automatiquement en cas de non-respect des conditions.</p>
+            
+            <p><em>Version de licence : 1.0 - Janvier 2025</em></p>
+        `
     };
     
-    // Function to load legal document with fallback
-    function loadDocument(docType) {
+    // File mapping for API calls
+    const fileMap = {
+        'terms': 'terms_of_use.md',
+        'privacy': 'privacy_policy.md', 
+        'license': 'licence.md'
+    };
+    
+    // Function to load legal document using API
+    async function loadDocument(docType) {
         legalContent.innerHTML = `
             <div class="loading-docs">
                 <div class="loading-spinner"></div>
@@ -170,66 +168,36 @@
             </div>
         `;
         
-        const backendUrl = window.BACKEND_URL || 'http://localhost:5000';
-        const fileMap = {
-            'terms': 'terms_of_use.md',
-            'privacy': 'privacy_policy.md', 
-            'license': 'licence.md'
-        };
-        
         const filename = fileMap[docType];
         const fallback = fallbackContent[docType];
         
-        // Only try to load from backend if URL is available
-        if (window.BACKEND_URL && filename) {
-            fetch(`${backendUrl}/docs/legal/${filename}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Failed to load document');
-                    }
-                    return response.text();
-                })
-                .then(markdown => {
-                    if (markdown && markdown.trim().length > 0) {
-                        // Simple markdown to HTML conversion
-                        const html = markdown
-                            .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-                            .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-                            .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-                            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                            .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                            .replace(/\n\n/g, '</p><p>')
-                            .replace(/^(.+)$/gm, '<p>$1</p>')
-                            .replace(/<p><h/g, '<h')
-                            .replace(/<\/h([1-6])><\/p>/g, '</h$1>');
-                        
-                        legalContent.innerHTML = `
-                            <div class="legal-card">
-                                <div class="card-body legal-body">
-                                    ${html}
-                                </div>
-                            </div>
-                        `;
-                    } else {
-                        throw new Error('Empty content');
-                    }
-                })
-                .catch(error => {
-                    console.log('Using fallback legal content:', error.message);
-                    showFallbackContent(fallback);
-                });
+        // Only try to load from backend if API and backend URL are available
+        if (window.api && window.BACKEND_URL && filename) {
+            try {
+                console.log(`Loading legal document ${filename} via API...`);
+                const markdown = await window.api.loadLegalDocument(filename);
+                const html = window.api.markdownToHtml(markdown);
+                
+                showContent(html);
+                console.log(`Legal document ${filename} loaded successfully via API`);
+                return;
+                
+            } catch (error) {
+                console.log('API loading failed, using fallback content:', error.message);
+            }
         } else {
-            // No backend URL available, use fallback immediately
-            console.log('No backend URL available, using fallback legal content');
-            showFallbackContent(fallback);
+            console.log('API or backend URL not available, using fallback content');
         }
+        
+        // Use fallback content
+        showContent(fallback);
     }
     
-    function showFallbackContent(fallback) {
+    function showContent(htmlContent) {
         legalContent.innerHTML = `
             <div class="legal-card">
                 <div class="card-body legal-body">
-                    ${fallback.content}
+                    ${htmlContent}
                 </div>
             </div>
         `;
@@ -251,36 +219,39 @@
         });
     });
     
-    // Load initial document
+    // Initialize legal page
     function initializeLegal() {
         loadDocument(currentDoc);
     }
     
-    // Load content immediately if DOM is ready
+    // Load content when ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initializeLegal);
     } else {
         initializeLegal();
     }
     
-    // Also listen for backend ready event
-    window.addEventListener('backendReady', initializeLegal);
+    // Listen for backend ready event
+    window.addEventListener('backendReady', () => {
+        console.log('Backend ready event received for legal page');
+        loadDocument(currentDoc);
+    });
     
-    // If BACKEND_URL becomes available later, try loading again
-    let checkBackendUrl = setInterval(() => {
-        if (window.BACKEND_URL && legalContent.innerHTML.includes('Chargement du document')) {
-            clearInterval(checkBackendUrl);
+    // Check periodically if API becomes available
+    let apiCheckInterval = setInterval(() => {
+        if (window.api && window.BACKEND_URL && legalContent.innerHTML.includes('Chargement du document')) {
+            clearInterval(apiCheckInterval);
             loadDocument(currentDoc);
         }
     }, 500);
     
-    // Stop checking after 10 seconds
+    // Stop checking after 10 seconds and show fallback
     setTimeout(() => {
-        clearInterval(checkBackendUrl);
+        clearInterval(apiCheckInterval);
         if (legalContent.innerHTML.includes('Chargement du document')) {
             const fallback = fallbackContent[currentDoc];
             if (fallback) {
-                showFallbackContent(fallback);
+                showContent(fallback);
             }
         }
     }, 10000);

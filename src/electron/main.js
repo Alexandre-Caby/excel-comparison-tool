@@ -7,6 +7,15 @@ const fs = require('fs');
 let mainWindow;
 let pythonProcess;
 
+// Add global error handling
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Promise Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
+
 function setupLogging() {
   const logDir = path.join(app.getPath('userData'), 'logs');
   
@@ -40,6 +49,65 @@ function setupLogging() {
   return logFile;
 }
 
+// Helper function to safely execute JavaScript in renderer
+async function safeExecuteJS(script, fallback = null, retries = 3) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    console.warn('Cannot execute JS: window is destroyed or null');
+    return false;
+  }
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      // Wait for the webContents to be ready
+      if (!mainWindow.webContents.isLoading() && mainWindow.webContents.getURL()) {
+        const result = await mainWindow.webContents.executeJavaScript(script);
+        return result;
+      } else {
+        console.log(`Waiting for webContents to be ready (attempt ${attempt})`);
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    } catch (error) {
+      console.error(`JavaScript execution error (attempt ${attempt}):`, error.message);
+      
+      if (attempt === retries && fallback) {
+        try {
+          console.log('Attempting fallback script...');
+          return await mainWindow.webContents.executeJavaScript(fallback);
+        } catch (fallbackError) {
+          console.error('Fallback script also failed:', fallbackError.message);
+          return false;
+        }
+      }
+      
+      if (attempt < retries) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+  }
+  
+  return false;
+}
+
+// Helper function to wait for DOM ready
+function waitForDOMReady() {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error('DOM ready timeout'));
+    }, 10000);
+
+    mainWindow.webContents.once('dom-ready', () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+
+    // If already ready
+    if (!mainWindow.webContents.isLoading()) {
+      clearTimeout(timeout);
+      resolve();
+    }
+  });
+}
+
 function createWindow() {
   setupLogging();
   
@@ -62,85 +130,123 @@ function createWindow() {
   });
 
   // Show loading screen immediately
-  mainWindow.loadFile(path.join(__dirname, '../frontend/loading.html')).catch(() => {
-    console.error('Failed to load loading screen');
-  });
-  
-  mainWindow.show();
+  mainWindow.loadFile(path.join(__dirname, '../frontend/loading.html'))
+    .then(() => {
+      console.log('Loading screen loaded successfully');
+      mainWindow.show();
+    })
+    .catch((error) => {
+      console.error('Failed to load loading screen:', error);
+      mainWindow.show(); // Show anyway
+    });
 
   // Start Python backend
   startPythonServer();
 
-  // Show clearer startup progress
+  // Show startup progress with safe execution
   let startupProgress = 0;
-  const startupInterval = setInterval(() => {
+  const startupInterval = setInterval(async () => {
     if (startupProgress < 90) {
       startupProgress += 5;
-      mainWindow.webContents.executeJavaScript(`
-        document.getElementById('progress-bar').style.width = '${startupProgress}%';
-        document.getElementById('status-message').innerText = 'Démarrage du serveur en cours...';
+      await safeExecuteJS(`
+        try {
+          const progressBar = document.getElementById('progress-bar');
+          const statusMessage = document.getElementById('status-message');
+          if (progressBar) progressBar.style.width = '${startupProgress}%';
+          if (statusMessage) statusMessage.innerText = 'Démarrage du serveur en cours...';
+        } catch (e) {
+          console.warn('Progress update failed:', e);
+        }
       `);
     }
   }, 300);
 
-  // Wait for backend with better timeout handling
+  // Wait for backend with better error handling
   waitForBackend()
-      .then((port) => {
-          clearInterval(startupInterval);
-          console.log(`Backend ready on port ${port}`);
-          
-          mainWindow.webContents.executeJavaScript(`
-            document.getElementById('progress-bar').style.width = '100%';
-            document.getElementById('status-message').innerText = 'Chargement de l\'application...';
-          `);
+    .then(async (port) => {
+      clearInterval(startupInterval);
+      console.log(`Backend ready on port ${port}`);
+      
+      // Update progress to 100%
+      await safeExecuteJS(`
+        try {
+          const progressBar = document.getElementById('progress-bar');
+          const statusMessage = document.getElementById('status-message');
+          if (progressBar) progressBar.style.width = '100%';
+          if (statusMessage) statusMessage.innerText = 'Chargement de l\'application...';
+        } catch (e) {
+          console.warn('Final progress update failed:', e);
+        }
+      `);
 
-          // Set the backend URL and load the main app
-          setTimeout(() => {
-              mainWindow.loadFile(path.join(__dirname, '../frontend/index.html')).then(() => {
-                  try {
-                    // Execute JavaScript with proper error handling
-                    mainWindow.webContents.executeJavaScript(`
-                        try {
-                            window.BACKEND_URL = 'http://localhost:${port}';
-                            console.log('Backend URL set to:', window.BACKEND_URL);
-                            
-                            // Wait a bit before dispatching the event
-                            setTimeout(() => {
-                                try {
-                                    window.dispatchEvent(new CustomEvent('backendReady', { 
-                                        detail: { backendUrl: 'http://localhost:${port}' } 
-                                    }));
-                                    console.log('Backend ready event dispatched');
-                                } catch (eventError) {
-                                    console.error('Error dispatching backend ready event:', eventError);
-                                }
-                            }, 200);
-                        } catch (error) {
-                            console.error('Error in backend setup script:', error);
-                        }
-                    `).catch((jsError) => {
-                        console.error('JavaScript execution error:', jsError);
-                        // Fallback: just set the backend URL
-                        mainWindow.webContents.executeJavaScript(`
-                            window.BACKEND_URL = 'http://localhost:${port}';
-                        `).catch((fallbackError) => {
-                            console.error('Fallback JavaScript execution also failed:', fallbackError);
-                        });
+      // Load the main application
+      setTimeout(async () => {
+        try {
+          await mainWindow.loadFile(path.join(__dirname, '../frontend/index.html'));
+          console.log('Main application loaded successfully');
+          
+          // Wait for DOM to be ready
+          await waitForDOMReady();
+          
+          // Set backend URL with proper error handling
+          const backendScript = `
+            try {
+              window.BACKEND_URL = 'http://localhost:${port}';
+              console.log('Backend URL set to:', window.BACKEND_URL);
+              
+              // Set a flag to indicate backend is ready
+              window.BACKEND_READY = true;
+              
+              // Dispatch event after a short delay
+              setTimeout(() => {
+                try {
+                  if (typeof CustomEvent !== 'undefined') {
+                    const event = new CustomEvent('backendReady', { 
+                      detail: { backendUrl: 'http://localhost:${port}' } 
                     });
-                } catch (error) {
-                  console.error('Error setting backend URL:', error);
+                    window.dispatchEvent(event);
+                    console.log('Backend ready event dispatched successfully');
+                  } else {
+                    console.warn('CustomEvent not available');
+                  }
+                } catch (eventError) {
+                  console.error('Error dispatching backend ready event:', eventError);
                 }
-            }).catch((loadError) => {
-                console.error('Error loading main HTML file:', loadError);
-                showError('Failed to load application interface');
-            });
-        }, 500);
-      })
-      .catch((error) => {
-          clearInterval(startupInterval);
-          console.error('Backend failed to start:', error);
-          showError(`Impossible de démarrer le serveur: ${error.message}`);
-      });
+              }, 500);
+              
+              true; // Return success
+            } catch (error) {
+              console.error('Error in backend setup script:', error);
+              false; // Return failure
+            }
+          `;
+          
+          const fallbackScript = `
+            window.BACKEND_URL = 'http://localhost:${port}';
+            window.BACKEND_READY = true;
+            console.log('Fallback: Backend URL set');
+            true;
+          `;
+          
+          const success = await safeExecuteJS(backendScript, fallbackScript);
+          
+          if (success) {
+            console.log('Backend URL setup completed successfully');
+          } else {
+            console.warn('Backend URL setup may have failed, but continuing...');
+          }
+          
+        } catch (loadError) {
+          console.error('Error loading main HTML file:', loadError);
+          await showError('Failed to load application interface');
+        }
+      }, 500);
+    })
+    .catch(async (error) => {
+      clearInterval(startupInterval);
+      console.error('Backend failed to start:', error);
+      await showError(`Impossible de démarrer le serveur: ${error.message}`);
+    });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -290,42 +396,63 @@ async function waitForBackend() {
   throw new Error('Backend failed to start within 30 seconds');
 }
 
-function showError(message) {
+async function showError(message) {
   console.error('Application Error:', message);
   
-  if (mainWindow) {
-    mainWindow.webContents.executeJavaScript(`
-      document.body.innerHTML = \`
-        <div style="padding: 20px; font-family: Arial, sans-serif; text-align: center;">
-          <h2 style="color: #d32f2f;">Application Error</h2>
-          <p>${message}</p>
-          <p>Please restart the application or contact support if the problem persists.</p>
-          <button onclick="window.location.reload()" style="padding: 8px 16px; margin-top: 10px;">Retry</button>
-        </div>
-      \`;
-    `);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    const errorScript = `
+      try {
+        document.body.innerHTML = \`
+          <div style="padding: 20px; font-family: Arial, sans-serif; text-align: center;">
+            <h2 style="color: #d32f2f;">Application Error</h2>
+            <p>${message}</p>
+            <p>Please restart the application or contact support if the problem persists.</p>
+            <button onclick="window.location.reload()" style="padding: 8px 16px; margin-top: 10px;">Retry</button>
+          </div>
+        \`;
+        true;
+      } catch (e) {
+        console.error('Error displaying error message:', e);
+        false;
+      }
+    `;
+    
+    await safeExecuteJS(errorScript);
   }
 }
 
 // IPC handlers
 ipcMain.handle('select-files', async (event, options) => {
-  const result = await dialog.showOpenDialog(mainWindow, {
-    properties: ['openFile', 'multiSelections'],
-    filters: [
-      { name: 'Excel Files', extensions: ['xlsx', 'xls'] },
-      { name: 'All Files', extensions: ['*'] }
-    ],
-    ...options
-  });
-  return result;
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'Excel Files', extensions: ['xlsx', 'xls'] },
+        { name: 'All Files', extensions: ['*'] }
+      ],
+      ...options
+    });
+    return result;
+  } catch (error) {
+    console.error('Error in select-files dialog:', error);
+    return { canceled: true, filePaths: [] };
+  }
 });
 
 // App event handlers
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+}).catch((error) => {
+  console.error('Error during app ready:', error);
+});
 
 app.on('window-all-closed', () => {
   if (pythonProcess) {
-    pythonProcess.kill('SIGTERM');
+    try {
+      pythonProcess.kill('SIGTERM');
+    } catch (error) {
+      console.error('Error killing Python process:', error);
+    }
   }
   if (process.platform !== 'darwin') {
     app.quit();
@@ -340,6 +467,10 @@ app.on('activate', () => {
 
 app.on('before-quit', () => {
   if (pythonProcess) {
-    pythonProcess.kill('SIGTERM');
+    try {
+      pythonProcess.kill('SIGTERM');
+    } catch (error) {
+      console.error('Error killing Python process on quit:', error);
+    }
   }
 });
