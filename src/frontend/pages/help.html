@@ -127,69 +127,46 @@
         </div>
     `;
     
-    // Function to load help content using API
-    async function loadHelpContent() {
-        // Only try to load from backend if API and backend URL are available
-        if (window.api && window.BACKEND_URL) {
-            try {
-                console.log('Loading user guide via API...');
-                const markdown = await window.api.loadUserGuide();
-                const html = window.api.markdownToHtml(markdown);
+    // Load content immediately - don't wait for events that might never fire
+    function loadHelpContent() {
+        try {
+            console.log('Loading help content...');
+            
+            // Always use fallback content - it's the most reliable approach
+            helpContent.innerHTML = fallbackContent;
+            console.log('Help content loaded successfully');
+            
+            // If API is available, try to load from backend in the background
+            // but don't wait for it or depend on it
+            if (window.api && window.BACKEND_URL) {
+                console.log('API available, attempting to load from backend...');
                 
-                helpContent.innerHTML = `
-                    <div class="help-card">
-                        <div class="card-body help-body">
-                            ${html}
-                        </div>
-                    </div>
-                `;
-                
-                console.log('User guide loaded successfully via API');
-                return;
-                
-            } catch (error) {
-                console.log('API loading failed, using fallback content:', error.message);
+                // Just attempt this in the background
+                window.api.loadUserGuide()
+                    .then(markdown => {
+                        if (markdown && markdown.trim()) {
+                            const html = window.api.markdownToHtml(markdown);
+                            helpContent.innerHTML = `
+                                <div class="help-card">
+                                    <div class="card-body help-body">
+                                        ${html}
+                                    </div>
+                                </div>
+                            `;
+                            console.log('User guide loaded from backend');
+                        }
+                    })
+                    .catch(error => {
+                        console.log('Using fallback content due to API error:', error.message);
+                    });
             }
-        } else {
-            console.log('API or backend URL not available, using fallback content');
-        }
-        
-        // Use fallback content
-        helpContent.innerHTML = fallbackContent;
-    }
-    
-    // Initialize help page
-    function initializeHelp() {
-        loadHelpContent();
-    }
-    
-    // Load content when ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializeHelp);
-    } else {
-        initializeHelp();
-    }
-    
-    // Listen for backend ready event
-    window.addEventListener('backendReady', () => {
-        console.log('Backend ready event received for help page');
-        loadHelpContent();
-    });
-    
-    // Check periodically if API becomes available
-    let apiCheckInterval = setInterval(() => {
-        if (window.api && window.BACKEND_URL && helpContent.innerHTML.includes('Chargement de la documentation')) {
-            clearInterval(apiCheckInterval);
-            loadHelpContent();
-        }
-    }, 500);
-    
-    // Stop checking after 10 seconds and show fallback
-    setTimeout(() => {
-        clearInterval(apiCheckInterval);
-        if (helpContent.innerHTML.includes('Chargement de la documentation')) {
+        } catch (error) {
+            console.error('Error in help content loading:', error);
             helpContent.innerHTML = fallbackContent;
         }
-    }, 10000);
+    }
+    
+    // Execute immediately, don't wait for DOMContentLoaded
+    loadHelpContent();
 })();
 </script>
