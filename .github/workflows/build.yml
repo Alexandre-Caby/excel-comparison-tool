@@ -199,6 +199,7 @@ jobs:
         Copy-Item "src/core/excel_processor.py" "$tempModuleDir/"
         Copy-Item "src/core/site_matcher.py" "$tempModuleDir/"
         Copy-Item "src/core/report_generating.py" "$tempModuleDir/"
+        Copy-Item "src/core/analysis.py" "$tempModuleDir/"
         Copy-Item "src/models/data_models.py" "$tempModuleDir/"
 
         # Create __init__.py files to make them proper packages
