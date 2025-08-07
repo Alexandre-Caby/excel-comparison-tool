@@ -1,3 +1,4 @@
+import sys
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -30,7 +31,13 @@ class AnalysisEngine:
         try:
             logger.info(f"Starting PHP analysis for {file_path}, sheet: {sheet_name}")
             
-            from src.core.excel_processor import ExcelProcessor
+            # Import ExcelProcessor with proper handling for both dev and packaged modes
+            if getattr(sys, 'frozen', False):
+                # PyInstaller mode
+                from excel_processor import ExcelProcessor
+            else:
+                # Development mode
+                from src.core.excel_processor import ExcelProcessor
             
             processor = ExcelProcessor(file_path)
             if not processor.load_workbook():

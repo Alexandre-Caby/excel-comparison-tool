@@ -203,6 +203,9 @@
                 const backendUrl = getBackendUrl();
                 console.log('Loading user guide from:', `${backendUrl}/docs/user_guide.md`);
                 
+                // Add a small delay to ensure backend is fully ready
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
                 const response = await fetch(`${backendUrl}/docs/user_guide.md`, {
                     method: 'GET',
                     headers: {
@@ -212,7 +215,7 @@
                 });
                 
                 if (!response.ok) {
-                    // Debug available docs if main request fails
+                    console.log('Direct fetch failed, trying to debug available docs...');
                     await debugAvailableDocs();
                     throw new Error(`Failed to load help content: ${response.status} ${response.statusText}`);
                 }
