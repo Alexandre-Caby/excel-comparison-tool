@@ -37,10 +37,28 @@
             margin-top: 10px;
             font-size: 14px;
         }
+        .logo-fallback {
+            width: 200px;
+            height: 60px;
+            background-color: #007145;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
-    <img src="../images/logo_ect.png" alt="ECT Technis Logo" class="logo">
+    <!-- Try to load the logo, fallback to text if not found -->
+    <img src="images/logo_ect.png" alt="ECT Technis Logo" class="logo" 
+         onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='flex';">
+    <div id="logo-fallback" class="logo-fallback" style="display: none;">
+        ECT TECHNIS
+    </div>
     <h2>ECT Technis</h2>
     <div class="progress-container">
         <div id="progress-bar"></div>

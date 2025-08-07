@@ -50,8 +50,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      webSecurity: true,
-      devTools: true
+      webSecurity: true
     },
     icon: path.join(__dirname, '../frontend/images/icon_excel_comparison.ico'),
     show: false,
@@ -60,17 +59,6 @@ function createWindow() {
     resizable: true,
     minWidth: 1200,
     minHeight: 800
-  });
-
-    // Add keyboard shortcut to open developer tools
-  mainWindow.webContents.on('before-input-event', (event, input) => {
-    if (input.control && input.shift && input.key.toLowerCase() === 'i') {
-      mainWindow.webContents.toggleDevTools();
-    }
-    // Also allow F12
-    if (input.key === 'F12') {
-      mainWindow.webContents.toggleDevTools();
-    }
   });
 
   // Show loading screen immediately
@@ -109,13 +97,31 @@ function createWindow() {
           // Set the backend URL and load the main app
           setTimeout(() => {
               mainWindow.loadFile(path.join(__dirname, '../frontend/index.html')).then(() => {
-                  mainWindow.webContents.executeJavaScript(`
-                    window.BACKEND_URL = 'http://localhost:${port}';
-                    console.log('Backend URL set to:', window.BACKEND_URL);
-                    window.dispatchEvent(new CustomEvent('backendReady', { 
-                        detail: { backendUrl: 'http://localhost:${port}' } 
-                    }));
-                  `);
+                  try {
+                      mainWindow.webContents.executeJavaScript(`
+                          window.BACKEND_URL = 'http://localhost:${port}';
+                          console.log('Backend URL set to:', window.BACKEND_URL);
+                          
+                          // Wait a bit before dispatching the event
+                          setTimeout(() => {
+                              try {
+                                  window.dispatchEvent(new CustomEvent('backendReady', { 
+                                      detail: { backendUrl: 'http://localhost:${port}' } 
+                                  }));
+                                  console.log('Backend ready event dispatched');
+                              } catch (eventError) {
+                                  console.error('Error dispatching backend ready event:', eventError);
+                              }
+                          }, 200);
+                      `).catch((jsError) => {
+                          console.error('JavaScript execution error:', jsError);
+                          mainWindow.webContents.executeJavaScript(`
+                              window.BACKEND_URL = 'http://localhost:${port}';
+                          `);
+                      });
+                  } catch (error) {
+                    console.error('Error setting backend URL:', error);
+                  }
               });
           }, 500);
       })

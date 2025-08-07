@@ -98,6 +98,9 @@
                 
                 // Code blocks (for legal references)
                 .replace(/`([^`]+)`/g, '<code class="legal-code">$1</code>')
+                
+                // Code blocks (multi-line)
+                .replace(/```([^```]+)```/g, '<pre class="legal-code-block"><code>$1</code></pre>');
 
             // Convert newlines to paragraphs
             const paragraphs = html.split(/\n\n+/);
@@ -105,7 +108,7 @@
                 p = p.trim();
                 
                 // Skip if already wrapped in HTML tag
-                if (p.startsWith('<h') || p.startsWith('<li') || p === '') return p;
+                if (p.startsWith('<h') || p.startsWith('<li') || p.startsWith('<pre') || p === '') return p;
                 
                 // Wrap content in paragraph tags if it contains text
                 if (p.match(/\S/)) return `<p class="legal-paragraph">${p}</p>`;
@@ -213,6 +216,9 @@
                 
                 const backendUrl = getBackendUrl();
                 console.log('Loading legal document from:', `${backendUrl}/docs/legal/${filename}`);
+                
+                // Add a small delay to ensure backend is fully ready
+                await new Promise(resolve => setTimeout(resolve, 100));
                 
                 const response = await fetch(`${backendUrl}/docs/legal/${filename}`, {
                     method: 'GET',
