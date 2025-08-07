@@ -96,10 +96,12 @@ class ECTApp {
                 this.initAnalysisPage();
                 break;
             case 'help':
-                this.loadHelpContent();
+                // Help page handles its own content loading via embedded JavaScript
+                console.log('Help page loaded - content handled by page script');
                 break;
             case 'legal':
-                this.loadLegalContent();
+                // Legal page handles its own content loading via embedded JavaScript
+                console.log('Legal page loaded - content handled by page script');
                 break;
         }
     }
@@ -191,7 +193,6 @@ class ECTApp {
     
     // Simple markdown to HTML converter
     simpleMarkdownToHtml(markdown) {
-        // This is a very basic implementation - replace with a proper markdown parser for production
         return markdown
             .replace(/^# (.*$)/gm, '<h1>$1</h1>')
             .replace(/^## (.*$)/gm, '<h2>$1</h2>')
