@@ -98,32 +98,43 @@ function createWindow() {
           setTimeout(() => {
               mainWindow.loadFile(path.join(__dirname, '../frontend/index.html')).then(() => {
                   try {
-                      mainWindow.webContents.executeJavaScript(`
-                          window.BACKEND_URL = 'http://localhost:${port}';
-                          console.log('Backend URL set to:', window.BACKEND_URL);
-                          
-                          // Wait a bit before dispatching the event
-                          setTimeout(() => {
-                              try {
-                                  window.dispatchEvent(new CustomEvent('backendReady', { 
-                                      detail: { backendUrl: 'http://localhost:${port}' } 
-                                  }));
-                                  console.log('Backend ready event dispatched');
-                              } catch (eventError) {
-                                  console.error('Error dispatching backend ready event:', eventError);
-                              }
-                          }, 200);
-                      `).catch((jsError) => {
-                          console.error('JavaScript execution error:', jsError);
-                          mainWindow.webContents.executeJavaScript(`
-                              window.BACKEND_URL = 'http://localhost:${port}';
-                          `);
-                      });
-                  } catch (error) {
-                    console.error('Error setting backend URL:', error);
-                  }
-              });
-          }, 500);
+                    // Execute JavaScript with proper error handling
+                    mainWindow.webContents.executeJavaScript(`
+                        try {
+                            window.BACKEND_URL = 'http://localhost:${port}';
+                            console.log('Backend URL set to:', window.BACKEND_URL);
+                            
+                            // Wait a bit before dispatching the event
+                            setTimeout(() => {
+                                try {
+                                    window.dispatchEvent(new CustomEvent('backendReady', { 
+                                        detail: { backendUrl: 'http://localhost:${port}' } 
+                                    }));
+                                    console.log('Backend ready event dispatched');
+                                } catch (eventError) {
+                                    console.error('Error dispatching backend ready event:', eventError);
+                                }
+                            }, 200);
+                        } catch (error) {
+                            console.error('Error in backend setup script:', error);
+                        }
+                    `).catch((jsError) => {
+                        console.error('JavaScript execution error:', jsError);
+                        // Fallback: just set the backend URL
+                        mainWindow.webContents.executeJavaScript(`
+                            window.BACKEND_URL = 'http://localhost:${port}';
+                        `).catch((fallbackError) => {
+                            console.error('Fallback JavaScript execution also failed:', fallbackError);
+                        });
+                    });
+                } catch (error) {
+                  console.error('Error setting backend URL:', error);
+                }
+            }).catch((loadError) => {
+                console.error('Error loading main HTML file:', loadError);
+                showError('Failed to load application interface');
+            });
+        }, 500);
       })
       .catch((error) => {
           clearInterval(startupInterval);
