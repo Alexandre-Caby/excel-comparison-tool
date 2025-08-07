@@ -14,6 +14,11 @@
     (function() {
         const helpContent = document.getElementById('help-content');
         
+        // Function to get the backend URL (set by Electron or default for web)
+        function getBackendUrl() {
+            return window.BACKEND_URL || 'http://localhost:5000';
+        }
+        
         // Enhanced markdown to HTML conversion
         function enhancedMarkdownToHtml(markdown) {
             // Process the table of contents first
@@ -35,11 +40,15 @@
                 });
             }
             
-            // Build TOC HTML
-            tocItems.forEach(item => {
-                toc += `<li class="toc-item toc-level-${item.level}"><a href="#${item.id}" class="toc-link">${item.text}</a></li>`;
-            });
-            toc += '</ul></div>';
+            // Build TOC HTML (only if there are multiple headings)
+            if (tocItems.length > 1) {
+                tocItems.forEach(item => {
+                    toc += `<li class="toc-item toc-level-${item.level}"><a href="#${item.id}" class="toc-link">${item.text}</a></li>`;
+                });
+                toc += '</ul></div>';
+            } else {
+                toc = ''; // No TOC for single section documents
+            }
             
             // Replace Markdown syntax with HTML
             let html = markdown
@@ -56,11 +65,14 @@
                     const id = title.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
                     return `<h3 id="${id}" class="help-heading help-h3">${title}</h3>`;
                 })
+                .replace(/^#### (.+)$/gm, (match, title) => {
+                    const id = title.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+                    return `<h4 id="${id}" class="help-heading help-h4">${title}</h4>`;
+                })
                 
                 // Lists
                 .replace(/^\s*(?:[0-9]+\.|\-|\*)\s+(.+)$/gm, function(match, item) {
                     const isNumbered = match.trim().match(/^[0-9]+\./);
-                    const listType = isNumbered ? 'ol' : 'ul';
                     return `<li class="help-list-item">${item}</li>`;
                 })
                 
@@ -73,9 +85,15 @@
                     if (url.startsWith('#')) {
                         return `<a href="${url}" class="help-link toc-link">${text}</a>`;
                     } else {
-                        return `<a href="${url}" class="help-link">${text}</a>`;
+                        return `<a href="${url}" class="help-link" target="_blank" rel="noopener noreferrer">${text}</a>`;
                     }
                 })
+                
+                // Code blocks (inline code)
+                .replace(/`([^`]+)`/g, '<code class="help-code">$1</code>')
+                
+                // Code blocks (multi-line)
+                .replace(/```([^```]+)```/g, '<pre class="help-code-block"><code>$1</code></pre>');
 
             // Convert newlines to paragraphs
             const paragraphs = html.split(/\n\n+/);
@@ -83,7 +101,7 @@
                 p = p.trim();
                 
                 // Skip if already wrapped in HTML tag
-                if (p.startsWith('<h') || p.startsWith('<li') || p === '') return p;
+                if (p.startsWith('<h') || p.startsWith('<li') || p.startsWith('<pre') || p === '') return p;
                 
                 // Wrap content in paragraph tags if it contains text
                 if (p.match(/\S/)) return `<p class="help-paragraph">${p}</p>`;
@@ -101,14 +119,11 @@
             let listItems;
             
             while ((listItems = listItemRegex.exec(html)) !== null) {
-                // Add text before the list
                 result += html.substring(lastIndex, listItems.index);
                 
-                // Determine if it's a numbered list
                 const isNumbered = html.substring(Math.max(0, listItems.index - 20), listItems.index).match(/[0-9]+\./);
                 const listTag = isNumbered ? 'ol' : 'ul';
                 
-                // Find all consecutive list items
                 let listContent = listItems[0];
                 let nextItemMatch;
                 let nextIndex = listItems.index + listItems[0].length;
@@ -129,13 +144,87 @@
             return toc + '<div class="help-content">' + result + '</div>';
         }
         
-        // Load user guide
-        fetch('/docs/user_guide.md')
-            .then(response => {
-                if (!response.ok) throw new Error('Failed to load help content');
-                return response.text();
-            })
-            .then(markdown => {
+        // Function to wait for backend to be ready (with timeout)
+        async function waitForBackend() {
+            const backendUrl = getBackendUrl();
+            let retries = 0;
+            const maxRetries = 20;
+            
+            while (retries < maxRetries) {
+                try {
+                    const response = await fetch(`${backendUrl}/health`, { 
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        console.log('Backend is ready');
+                        return true;
+                    }
+                } catch (error) {
+                    console.log(`Waiting for backend... (attempt ${retries + 1})`);
+                }
+                
+                retries++;
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            throw new Error('Backend not available after multiple attempts');
+        }
+        
+        // Function to debug available docs
+        async function debugAvailableDocs() {
+            try {
+                const backendUrl = getBackendUrl();
+                const response = await fetch(`${backendUrl}/api/docs/list`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Available documentation files:', data);
+                    return data;
+                } else {
+                    console.error('Failed to get docs list:', response.status);
+                    return null;
+                }
+            } catch (error) {
+                console.error('Error getting docs list:', error);
+                return null;
+            }
+        }
+        
+        // Main function to load user guide
+        async function loadUserGuide() {
+            try {
+                // Wait for backend to be ready
+                await waitForBackend();
+                
+                const backendUrl = getBackendUrl();
+                console.log('Loading user guide from:', `${backendUrl}/docs/user_guide.md`);
+                
+                const response = await fetch(`${backendUrl}/docs/user_guide.md`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/plain',
+                        'Content-Type': 'text/plain; charset=utf-8'
+                    }
+                });
+                
+                if (!response.ok) {
+                    // Debug available docs if main request fails
+                    await debugAvailableDocs();
+                    throw new Error(`Failed to load help content: ${response.status} ${response.statusText}`);
+                }
+                
+                const markdown = await response.text();
+                
+                if (!markdown || markdown.trim().length === 0) {
+                    throw new Error('Loaded markdown content is empty');
+                }
+                
+                console.log('Successfully loaded markdown content, length:', markdown.length);
+                
                 // Format the markdown into beautiful HTML
                 const formattedContent = enhancedMarkdownToHtml(markdown);
                 
@@ -146,11 +235,12 @@
                         </div>
                     </div>
                 `;
-
-                helpContent.querySelectorAll('a.markdown-link').forEach(a => {
-                if (a.getAttribute('href')?.startsWith('#')) {
-                    a.removeAttribute('target');
-                }
+                
+                // Remove target="_blank" from internal links
+                helpContent.querySelectorAll('a.help-link').forEach(a => {
+                    if (a.getAttribute('href')?.startsWith('#')) {
+                        a.removeAttribute('target');
+                    }
                 });
                 
                 // Add smooth scrolling for TOC links
@@ -168,15 +258,56 @@
                         }
                     });
                 });
-            })
-            .catch(error => {
+                
+                console.log('Help content loaded successfully');
+                
+            } catch (error) {
                 console.error('Error loading help document:', error);
+                
                 helpContent.innerHTML = `
                     <div class="error-box">
                         <h3>Erreur de chargement</h3>
-                        <p>Impossible de charger la documentation. Veuillez réessayer.</p>
+                        <p>Impossible de charger la documentation: ${error.message}</p>
+                        <p><strong>Backend URL:</strong> ${getBackendUrl()}</p>
+                        <button onclick="location.reload()" class="btn btn-primary" style="margin: 0.5rem;">Réessayer</button>
+                        <button onclick="window.debugDocs()" class="btn btn-secondary" style="margin: 0.5rem;">Debug Info</button>
                     </div>
                 `;
+            }
+        }
+        
+        // Global debug function
+        window.debugDocs = async function() {
+            const info = await debugAvailableDocs();
+            console.log('Debug info:', info);
+            alert('Debug information logged to console. Check browser developer tools.');
+        };
+        
+        // Handle both immediate loading and backend ready event
+        function initializeHelp() {
+            console.log('Initializing help page...');
+            loadUserGuide();
+        }
+        
+        // Listen for backend ready event (from Electron)
+        window.addEventListener('backendReady', (event) => {
+            console.log('Backend ready event received:', event.detail);
+            initializeHelp();
+        });
+        
+        // Also try to load immediately if backend URL is already available
+        if (window.BACKEND_URL || document.readyState === 'complete') {
+            console.log('Backend URL already available or DOM ready, loading help immediately');
+            initializeHelp();
+        } else if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('DOM content loaded, checking for backend...');
+                // Give a short delay for Electron to set the backend URL
+                setTimeout(initializeHelp, 100);
             });
+        } else {
+            // Fallback - try to load after a short delay
+            setTimeout(initializeHelp, 500);
+        }
     })();
 </script>

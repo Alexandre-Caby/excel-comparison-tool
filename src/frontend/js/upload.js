@@ -267,7 +267,7 @@ class UploadManager {
     async loadCompareFilePreviewSingle(file, sheet, previewContent) {
         if (!sheet || !file) return;
         try {
-            const result = await api.previewSheet(file.filename, sheet, true);
+            const result = await api.previewSheet(file.filename, sheet, false, 'comparison');
             let html = '<h5>Données traitées (après gestion des en-têtes):</h5>';
             html += utils.createTable(result.processed_preview, result.processed_columns, 'data-table preview-table');
             previewContent.innerHTML = html;
@@ -528,7 +528,7 @@ class UploadManager {
         if (!sheetSelect.value || !this.baseFileInfo) return;
         
         try {
-            const result = await api.previewSheet(this.baseFileInfo.filename, sheetSelect.value, true);
+            const result = await api.previewSheet(this.baseFileInfo.filename, sheetSelect.value, true, 'base');
             
             let html = '<h5>Données traitées (après gestion des en-têtes):</h5>';
             html += utils.createTable(result.processed_preview, result.processed_columns, 'data-table preview-table');
@@ -547,8 +547,13 @@ class UploadManager {
         if (!sheetSelect.value || !this.compFilesInfo[sheetSelect.value]) return;
 
         try {
-            const result = await api.previewSheet(this.compFilesInfo[sheetSelect.value].filename, sheetSelect.value, true);
-
+            const result = await api.previewSheet(
+                this.compFilesInfo[sheetSelect.value].filename, 
+                sheetSelect.value, 
+                false, 
+                'comparison'
+            );
+            
             let html = '<h5>Données traitées (après gestion des en-têtes):</h5>';
             html += utils.createTable(result.processed_preview, result.processed_columns, 'data-table preview-table');
 

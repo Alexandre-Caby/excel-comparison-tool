@@ -1,5 +1,33 @@
 # Excel Comparison Tool - Changelog
 
+## Version 1.2.0
+
+### New features
+- **PHP Analysis Module**: Added comprehensive analysis system for maintenance program files
+- **Equipment Analysis**: Track immobilization days, valid/invalid appointments, and operations by equipment
+- **Weekly Planning Analysis**: View scheduled maintenance by week with occupancy metrics
+- **Data Quality Detection**: Automated identification of date issues, missing values, and format problems
+- **Interactive Help System**: Added collapsible information panels explaining all metrics and calculations
+- **Enhanced Tooltips**: Added detailed explanations for all summary metrics
+- **Concatenated Data View**: View and filter raw maintenance data with consistent calculations
+- **Conflict Detection**: Intelligent identification of data issues with severity levels
+- **Excel Export**: Export complete analysis results to Excel for further processing
+
+### Technical Improvements
+- **Robust Date Processing**: Enhanced date parsing with multiple format support and validation
+- **Consistent Time Calculations**: Standardized day/hour calculations across all analysis views
+- **Non-destructive Validation**: Data quality issues are flagged rather than removed for better transparency
+- **Parallel Operation Handling**: Proper handling of multiple operations on same equipment/date
+- **Memory Optimization**: Improved handling of large datasets with reduced memory usage
+- **Enhanced Frontend Visualization**: Severity indicators and color-coding for data issues
+
+### Bug Fixes
+- Fixed issues with date format detection and parsing
+- Corrected calculation of immobilization days for equipment with parallel operations
+- Adjusted threshold for excessive immobilization detection to accommodate locomotives
+- Resolved warnings from pandas date parsing with proper format specification
+- Fixed display of metrics with proper rounding and number formatting
+
 ## Version 1.1.2
 
 ### Bug Fixes

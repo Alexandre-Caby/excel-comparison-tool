@@ -92,6 +92,9 @@ class ECTApp {
             case 'reports':
                 this.initReportsPage();
                 break;
+            case 'analysis':
+                this.initAnalysisPage();
+                break;
             case 'help':
                 this.loadHelpContent();
                 break;
@@ -167,7 +170,25 @@ class ECTApp {
             }
         }, 100);
     }
-    
+
+    initAnalysisPage() {
+        // Initialize analysis functionality with a small delay to ensure DOM is ready
+        setTimeout(() => {
+            try {
+                if (typeof AnalysisManager !== 'undefined') {
+                    if (!window.analysisManager) {
+                        window.analysisManager = new AnalysisManager();
+                    }
+                    window.analysisManager.init();
+                } else {
+                    console.warn('AnalysisManager class not found.');
+                }
+            } catch (error) {
+                console.error('Error initializing analysis page:', error);
+            }
+        }, 100);
+    }
+
     async loadHelpContent() {
         try {
             const helpContent = document.getElementById('help-content');

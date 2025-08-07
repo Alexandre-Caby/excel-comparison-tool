@@ -61,10 +61,10 @@ function createWindow() {
     minHeight: 800
   });
 
-  // Start Python backend
+  // Start Python backend first
   startPythonServer();
 
-  // Load the application
+  // Show loading page immediately
   mainWindow.loadFile(path.join(__dirname, '../frontend/index.html')).catch(() => {
     console.error('Failed to load application file');
     showError('Failed to load application');
@@ -72,24 +72,29 @@ function createWindow() {
   
   mainWindow.show();
 
-  // Wait for backend and setup
-  setTimeout(() => {
-    waitForBackend().then((port) => {
-      console.log(`Backend ready on port ${port}`);
-      mainWindow.loadFile(path.join(__dirname, '../frontend/index.html'));
-
-      mainWindow.webContents.once('dom-ready', () => {
-          mainWindow.webContents.executeJavaScript(`
-              window.BACKEND_URL = 'http://localhost:${port}';
-              console.log('Backend URL set to:', window.BACKEND_URL);
-          `);
-      });
-
+  // Wait for backend and then set up the frontend properly
+  waitForBackend().then((port) => {
+    console.log(`Backend ready on port ${port}`);
+    
+    // Set the backend URL in the renderer process
+    mainWindow.webContents.executeJavaScript(`
+      window.BACKEND_URL = 'http://localhost:${port}';
+      console.log('Backend URL set to:', window.BACKEND_URL);
+      
+      // Dispatch a custom event to notify that backend is ready
+      window.dispatchEvent(new CustomEvent('backendReady', { 
+        detail: { backendUrl: 'http://localhost:${port}' } 
+      }));
+    `).then(() => {
+      console.log('Backend URL successfully set in renderer');
     }).catch((error) => {
-      console.error('Backend failed to start:', error);
-      showError(`Backend failed to start: ${error.message}`);
+      console.error('Failed to set backend URL in renderer:', error);
     });
-  }, 2000);
+
+  }).catch((error) => {
+    console.error('Backend failed to start:', error);
+    showError(`Backend failed to start: ${error.message}`);
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -209,16 +214,27 @@ async function waitForBackend() {
       }
       
       const response = await axios.get('http://localhost:5000/health', { 
-        timeout: 1000 
+        timeout: 2000 
       });
       
       if (response.status === 200) {
         console.log('Backend is ready');
+        
+        // Test if docs endpoint is working
+        try {
+          const docsTest = await axios.get('http://localhost:5000/api/docs/list', { 
+            timeout: 2000 
+          });
+          console.log('Docs endpoint is working');
+        } catch (docsError) {
+          console.warn('Docs endpoint test failed:', docsError.message);
+        }
+        
         return 5000;
       }
     } catch (error) {
       if (attempt % 10 === 0) {
-        console.log(`Still waiting for backend... (attempt ${attempt})`);
+        console.log(`Still waiting for backend... (attempt ${attempt}/${maxAttempts})`);
       }
     }
     

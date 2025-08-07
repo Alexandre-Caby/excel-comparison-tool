@@ -7,73 +7,33 @@
     margin-bottom: 2rem;
 }
 
-.upload-section {
-    animation: fadeInUp 0.4s ease-out;
-}
-
 .file-upload-area {
     border: 2px dashed #cbd5e1;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     padding: 2rem;
     text-align: center;
-    transition: all 0.3s ease;
+    transition: all var(--transition-normal);
     background-color: #f8fafc;
     cursor: pointer;
 }
 
-.file-upload-area:hover {
-    border-color: #007147;
-    background-color: rgba(0, 113, 71, 0.05);
-}
-
+.file-upload-area:hover,
 .file-upload-area.dragover {
-    border-color: #007147;
-    background-color: rgba(0, 113, 71, 0.1);
+    border-color: var(--primary);
+    background-color: var(--vert-rle-10);
     transform: scale(1.01);
-}
-
-.upload-prompt p {
-    margin: 0.5rem 0;
-}
-
-.upload-prompt p:first-child {
-    font-size: 1.1rem;
-    color: #2d3748;
-}
-
-.upload-hint {
-    margin-top: 1rem;
-    font-size: 0.85rem;
-    color: #64748b;
-    font-style: italic;
 }
 
 .file-info {
     margin-top: 1.5rem;
     padding: 1rem;
     background-color: #f0f9ff;
-    border-left: 4px solid #007147;
-    border-radius: 4px;
-    animation: fadeIn 0.3s ease-out;
+    border-left: 4px solid var(--primary);
+    border-radius: var(--radius-sm);
 }
 
-.file-item {
-    margin-bottom: 1rem;
-    padding: 15px;
-    border-radius: 6px;
-    background-color: rgba(255, 255, 255, 0.7);
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.file-item:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-}
-
-/* Configuration section */
+/* Configuration */
 .comparison-config {
-    animation: fadeInUp 0.5s ease-out;
     margin-top: 2rem;
 }
 
@@ -84,40 +44,82 @@
 .config-section label {
     display: block;
     font-weight: 600;
-    /* margin-bottom: 0.75rem; */
     color: #334155;
-}
-
-.config-section select {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    background-color: white;
-    font-size: 1rem;
-    color: #334155;
-    transition: all 0.2s ease;
     margin-bottom: 0.5rem;
 }
 
-.config-section select:focus {
-    border-color: #007147;
+.config-section select,
+.config-section input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background-color: white;
+    font-size: 1rem;
+    transition: border-color var(--transition-fast);
+}
+
+.config-section select:focus,
+.config-section input:focus {
+    border-color: var(--primary);
     outline: none;
     box-shadow: 0 0 0 3px rgba(0, 113, 71, 0.15);
 }
 
-.help-text {
-    color: #64748b;
-    font-size: 0.9rem;
-    margin-top: 0.5rem;
-}
-
-/* Site mapping styles - Enhanced styling */
+/* Site mapping */
 .site-mapping {
     background-color: #f8fafc;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     padding: 1.5rem;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-color);
+}
+
+.mapping-input {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.mappings-display {
+    background-color: white;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.mapping-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.mapping-item:last-child {
+    border-bottom: none;
+}
+
+.config-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+    gap: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .upload-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .mapping-input {
+        flex-direction: column;
+    }
+    
+    .config-actions {
+        flex-direction: column;
+    }
 }
 
 .mapping-input {
@@ -185,33 +187,33 @@
 .mapping-item strong {
     display: inline-block;
     padding: 0.25rem 0.5rem;
-    background-color: #007147;
+    background-color: var(--primary);
     color: white;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     font-weight: 600;
     margin-right: 0.5rem;
 }
 
 .mapping-item .btn-remove {
     background-color: transparent;
-    color: #ef4444;
-    border: 1px solid #ef4444;
+    color: var(--error);
+    border: 1px solid var(--error);
     padding: 0.35rem 0.75rem;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     font-size: 0.9rem;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-fast);
 }
 
 .mapping-item .btn-remove:hover {
-    background-color: #ef4444;
+    background-color: var(--error);
     color: white;
 }
 
 .no-mappings {
     text-align: center;
     padding: 2rem;
-    color: #64748b;
+    color: var(--text-secondary);
     font-style: italic;
 }
 

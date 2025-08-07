@@ -2,6 +2,7 @@ import os
 import tempfile
 import pandas as pd
 import xlsxwriter
+import csv
 from time import time
 from datetime import datetime, date, time as dt_time
 import re
@@ -17,7 +18,53 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.enums import TA_CENTER
 
 class ReportGenerator:
-    """Generates reports in various formats."""
+    """Unified report generator for both comparison and analysis exports."""
+    
+    @staticmethod
+    def generate_unified_export(export_data, temp_dir):
+        """Main unified export method that handles both comparison and analysis"""
+        export_type = export_data.get('type')
+        format_type = export_data.get('format', 'excel')
+        
+        if export_type == 'comparison':
+            return ReportGenerator._generate_comparison_export(export_data, temp_dir)
+        elif export_type == 'analysis':
+            return ReportGenerator._generate_analysis_export(export_data, temp_dir)
+        else:
+            raise ValueError(f"Unknown export type: {export_type}")
+    
+    @staticmethod
+    def _generate_comparison_export(export_data, temp_dir):
+        """Generate comparison report export"""
+        format_type = export_data.get('format', 'excel')
+        report = export_data.get('report')
+        session_data = export_data.get('session_data')
+        
+        if format_type == 'excel':
+            return ReportGenerator.generate_excel_report_temp(report, session_data, temp_dir)
+        elif format_type == 'csv':
+            return ReportGenerator.generate_csv_report_temp(report, session_data, temp_dir)
+        elif format_type == 'pdf':
+            return ReportGenerator.generate_pdf_report_temp(report, session_data, temp_dir)
+        else:
+            raise ValueError(f"Unsupported comparison export format: {format_type}")
+    
+    @staticmethod
+    def _generate_analysis_export(export_data, temp_dir):
+        """Generate analysis report export"""
+        format_type = export_data.get('format', 'excel')
+        results = export_data.get('results')
+        export_options = export_data.get('export_options', {})
+        filename = export_data.get('filename', 'analysis_export')
+        
+        if format_type == 'excel':
+            return ReportGenerator._create_analysis_excel_export(results, export_options, temp_dir)
+        elif format_type == 'csv':
+            return ReportGenerator._create_analysis_csv_export(results, export_options, temp_dir)
+        elif format_type == 'pdf':
+            return ReportGenerator._create_analysis_pdf_export(results, export_options, temp_dir)
+        else:
+            raise ValueError(f"Unsupported analysis export format: {format_type}")
     
     @staticmethod
     def generate_excel_report_temp(report_data, session_data, temp_dir):
@@ -1078,3 +1125,357 @@ class ReportGenerator:
                     except:
                         pass
         return None
+
+    # ===== NEW ANALYSIS EXPORT METHODS ==============================================
+    
+    @staticmethod
+    def _create_analysis_excel_export(results, export_options, temp_dir):
+        """Create Excel export for analysis results"""
+        temp_fd, temp_path = tempfile.mkstemp(suffix='.xlsx', dir=temp_dir)
+        os.close(temp_fd)
+        
+        try:
+            with xlsxwriter.Workbook(temp_path) as workbook:
+                # Define formats
+                title_format = workbook.add_format({
+                    'bold': True, 'font_size': 16, 'align': 'center',
+                    'bg_color': '#007147', 'font_color': 'white'
+                })
+                
+                header_format = workbook.add_format({
+                    'bold': True, 'bg_color': '#4CA27E', 'font_color': 'white', 'border': 1
+                })
+                
+                data_format = workbook.add_format({'border': 1})
+                
+                # Create summary sheet if requested
+                if export_options.get('summary', True):
+                    ReportGenerator._create_analysis_summary_sheet(workbook, results, title_format, header_format, data_format)
+                
+                # Create weekly planning sheet if requested and data exists
+                if export_options.get('weekly_planning', True) and results.get('weekly_planning'):
+                    ReportGenerator._create_weekly_planning_sheet(workbook, results['weekly_planning'], header_format, data_format)
+                
+                # Create equipment analysis sheet if requested and data exists
+                if export_options.get('equipment_analysis', True) and results.get('equipment_analysis'):
+                    ReportGenerator._create_equipment_analysis_sheet(workbook, results['equipment_analysis'], header_format, data_format)
+                
+                # Create concatenated data sheet if requested
+                if export_options.get('concatenated', True) and results.get('concatenated_data'):
+                    ReportGenerator._create_concatenated_data_sheet(workbook, results['concatenated_data'], header_format, data_format)
+                
+                # Create conflicts sheet if requested
+                if export_options.get('conflicts', True) and results.get('conflicts'):
+                    ReportGenerator._create_conflicts_sheet(workbook, results['conflicts'], header_format, data_format)
+            
+            return temp_path
+            
+        except Exception as e:
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+            raise e
+    
+    @staticmethod
+    def _create_analysis_summary_sheet(workbook, results, title_format, header_format, data_format):
+        """Create summary sheet for analysis"""
+        ws = workbook.add_worksheet('📊 Résumé')
+        
+        # Title
+        ws.merge_range('A1:F1', 'RAPPORT D\'ANALYSE DE MAINTENANCE', title_format)
+        
+        # Summary data
+        summary = results.get('summary', {})
+        
+        summary_data = [
+            ['Total RDV', summary.get('total_rdv', 0)],
+            ['Total Clients', summary.get('total_clients', 0)],
+            ['Total Équipements', summary.get('total_equipment', 0)],
+            ['Durée moyenne RDV (heures)', summary.get('average_rdv_duration_hours', 0)],
+            ['Total jours d\'immobilisation', summary.get('total_days_with_rdv', 0)],
+            ['Conflits détectés', summary.get('conflict_count', 0)]
+        ]
+        
+        # Write headers
+        ws.write('A3', 'Métrique', header_format)
+        ws.write('B3', 'Valeur', header_format)
+        
+        # Write data
+        for row_idx, (metric, value) in enumerate(summary_data, start=4):
+            ws.write(row_idx, 0, metric, data_format)
+            ws.write(row_idx, 1, value, data_format)
+        
+        # Set column widths
+        ws.set_column('A:A', 30)
+        ws.set_column('B:B', 15)
+    
+    @staticmethod
+    def _create_weekly_planning_sheet(workbook, weekly_data, header_format, data_format):
+        """Create weekly planning sheet"""
+        ws = workbook.add_worksheet('📅 Planning Hebdomadaire')
+        
+        # Headers
+        headers = ['Semaine', 'RDV', 'Clients', 'Engins', 'Durée Moy. RDV (h)', 'Jours d\'immobilisation']
+        for col_idx, header in enumerate(headers):
+            ws.write(0, col_idx, header, header_format)
+        
+        # Data
+        for row_idx, (week, data) in enumerate(weekly_data.items(), start=1):
+            ws.write(row_idx, 0, week, data_format)
+            ws.write(row_idx, 1, data.get('rdv_count', 0), data_format)
+            ws.write(row_idx, 2, data.get('client_count', 0), data_format)
+            ws.write(row_idx, 3, data.get('equipment_count', 0), data_format)
+            ws.write(row_idx, 4, data.get('avg_rdv_duration_hours', 0), data_format)
+            ws.write(row_idx, 5, data.get('immobilization_days', 0), data_format)
+        
+        # Set column widths
+        for col_idx in range(len(headers)):
+            ws.set_column(col_idx, col_idx, 15)
+    
+    @staticmethod
+    def _create_equipment_analysis_sheet(workbook, equipment_data, header_format, data_format):
+        """Create equipment analysis sheet"""
+        ws = workbook.add_worksheet('🚂 Analyse Équipements')
+        
+        # Headers
+        headers = ['Site', 'Équipement', 'RDV', 'Jours d\'immobilisation', 'Heures d\'immobilisation', 'Durée moy. (j)', 'Opérations', 'Clients']
+        for col_idx, header in enumerate(headers):
+            ws.write(0, col_idx, header, header_format)
+        
+        # Data
+        for row_idx, (key, data) in enumerate(equipment_data.items(), start=1):
+            ws.write(row_idx, 0, data.get('site', ''), data_format)
+            ws.write(row_idx, 1, data.get('equipment', ''), data_format)
+            ws.write(row_idx, 2, data.get('rdv_count', 0), data_format)
+            ws.write(row_idx, 3, data.get('total_immobilization_days', 0), data_format)
+            ws.write(row_idx, 4, data.get('total_immobilization_hours', 0), data_format)
+            ws.write(row_idx, 5, data.get('average_duration_days', 0), data_format)
+            ws.write(row_idx, 6, data.get('operations_count', 0), data_format)
+            ws.write(row_idx, 7, data.get('clients_count', 0), data_format)
+        
+        # Set column widths
+        for col_idx in range(len(headers)):
+            ws.set_column(col_idx, col_idx, 20)
+    
+    @staticmethod
+    def _create_concatenated_data_sheet(workbook, concatenated_data, header_format, data_format):
+        """Create concatenated data sheet"""
+        ws = workbook.add_worksheet('🔗 Données Concaténées')
+        
+        if not concatenated_data:
+            ws.write(0, 0, 'Aucune donnée concaténée disponible')
+            return
+        
+        # Headers
+        headers = ['Index', 'Site', 'Client', 'Engin', 'Date Début', 'Date Fin', 'Opération', 'Chaîne Concaténée', 'Durée (j)', 'Durée (h)']
+        for col_idx, header in enumerate(headers):
+            ws.write(0, col_idx, header, header_format)
+        
+        # Data (limit to first 1000 rows)
+        for row_idx, item in enumerate(concatenated_data[:1000], start=1):
+            ws.write(row_idx, 0, item.get('index', ''), data_format)
+            ws.write(row_idx, 1, item.get('site', ''), data_format)
+            ws.write(row_idx, 2, item.get('client', ''), data_format)
+            ws.write(row_idx, 3, item.get('engin', ''), data_format)
+            ws.write(row_idx, 4, item.get('date_debut', ''), data_format)
+            ws.write(row_idx, 5, item.get('date_fin', ''), data_format)
+            ws.write(row_idx, 6, item.get('operation', ''), data_format)
+            ws.write(row_idx, 7, item.get('concatenated', ''), data_format)
+            ws.write(row_idx, 8, item.get('duration_days', 0), data_format)
+            ws.write(row_idx, 9, item.get('duration_hours', 0), data_format)
+        
+        # Set column widths
+        column_widths = [8, 15, 20, 15, 20, 20, 20, 40, 10, 10]
+        for col_idx, width in enumerate(column_widths):
+            ws.set_column(col_idx, col_idx, width)
+    
+    @staticmethod
+    def _create_conflicts_sheet(workbook, conflicts, header_format, data_format):
+        """Create conflicts sheet"""
+        ws = workbook.add_worksheet('⚠️ Conflits')
+        
+        if not conflicts:
+            ws.write(0, 0, 'Aucun conflit détecté')
+            return
+        
+        # Headers
+        headers = ['Type', 'Équipement', 'Opération', 'Libellé', 'Sévérité', 'Description', 'Occurrences']
+        for col_idx, header in enumerate(headers):
+            ws.write(0, col_idx, header, header_format)
+        
+        # Data
+        for row_idx, conflict in enumerate(conflicts, start=1):
+            ws.write(row_idx, 0, conflict.get('type', ''), data_format)
+            ws.write(row_idx, 1, conflict.get('equipment', ''), data_format)
+            ws.write(row_idx, 2, conflict.get('operation', ''), data_format)
+            ws.write(row_idx, 3, conflict.get('libelle', ''), data_format)
+            ws.write(row_idx, 4, conflict.get('severity', ''), data_format)
+            ws.write(row_idx, 5, conflict.get('description', ''), data_format)
+            ws.write(row_idx, 6, conflict.get('occurrence_count', 1), data_format)
+        
+        # Set column widths
+        column_widths = [20, 20, 15, 30, 10, 40, 10]
+        for col_idx, width in enumerate(column_widths):
+            ws.set_column(col_idx, col_idx, width)
+    
+    @staticmethod
+    def _create_analysis_csv_export(results, export_options, temp_dir):
+        """Create CSV export for analysis results"""
+        temp_fd, temp_path = tempfile.mkstemp(suffix='.csv', dir=temp_dir)
+        
+        try:
+            with os.fdopen(temp_fd, 'w', newline='', encoding='utf-8-sig') as temp_file:
+                writer = csv.writer(temp_file, delimiter=';')
+                
+                # Write summary section
+                if export_options.get('summary', True):
+                    writer.writerow(['=== RÉSUMÉ D\'ANALYSE ==='])
+                    summary = results.get('summary', {})
+                    writer.writerow(['Total RDV', summary.get('total_rdv', 0)])
+                    writer.writerow(['Total Clients', summary.get('total_clients', 0)])
+                    writer.writerow(['Total Équipements', summary.get('total_equipment', 0)])
+                    writer.writerow(['Durée moyenne RDV (heures)', summary.get('average_rdv_duration_hours', 0)])
+                    writer.writerow(['Total jours d\'immobilisation', summary.get('total_days_with_rdv', 0)])
+                    writer.writerow(['Conflits détectés', summary.get('conflict_count', 0)])
+                    writer.writerow([''])
+                
+                # Write weekly planning if requested
+                if export_options.get('weekly_planning', True) and results.get('weekly_planning'):
+                    writer.writerow(['=== PLANNING HEBDOMADAIRE ==='])
+                    writer.writerow(['Semaine', 'RDV', 'Clients', 'Engins', 'Durée Moy. RDV (h)', 'Jours d\'immobilisation'])
+                    
+                    for week, data in results['weekly_planning'].items():
+                        writer.writerow([
+                            week,
+                            data.get('rdv_count', 0),
+                            data.get('client_count', 0),
+                            data.get('equipment_count', 0),
+                            data.get('avg_rdv_duration_hours', 0),
+                            data.get('immobilization_days', 0)
+                        ])
+                    writer.writerow([''])
+                
+                # Write concatenated data if requested (limited to first 100 rows)
+                if export_options.get('concatenated', True) and results.get('concatenated_data'):
+                    writer.writerow(['=== DONNÉES CONCATÉNÉES (100 premières) ==='])
+                    writer.writerow(['Index', 'Site', 'Client', 'Engin', 'Date Début', 'Date Fin', 'Opération', 'Chaîne Concaténée', 'Durée (j)', 'Durée (h)'])
+                    
+                    for item in results['concatenated_data'][:100]:
+                        writer.writerow([
+                            item.get('index', ''),
+                            item.get('site', ''),
+                            item.get('client', ''),
+                            item.get('engin', ''),
+                            item.get('date_debut', ''),
+                            item.get('date_fin', ''),
+                            item.get('operation', ''),
+                            item.get('concatenated', ''),
+                            item.get('duration_days', 0),
+                            item.get('duration_hours', 0)
+                        ])
+                    writer.writerow([''])
+                
+                # Write conflicts if requested
+                if export_options.get('conflicts', True) and results.get('conflicts'):
+                    writer.writerow(['=== CONFLITS DÉTECTÉS ==='])
+                    writer.writerow(['Type', 'Équipement', 'Opération', 'Libellé', 'Sévérité', 'Description', 'Occurrences'])
+                    
+                    for conflict in results['conflicts']:
+                        writer.writerow([
+                            conflict.get('type', ''),
+                            conflict.get('equipment', ''),
+                            conflict.get('operation', ''),
+                            conflict.get('libelle', ''),
+                            conflict.get('severity', ''),
+                            conflict.get('description', ''),
+                            conflict.get('occurrence_count', 1)
+                        ])
+
+            return temp_path
+            
+        except Exception as e:
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+            raise e
+    
+    @staticmethod
+    def _create_analysis_pdf_export(results, export_options, temp_dir):
+        """Create PDF export for analysis results"""
+        temp_fd, temp_path = tempfile.mkstemp(suffix='.pdf', dir=temp_dir)
+        os.close(temp_fd)
+        
+        try:
+            doc = SimpleDocTemplate(temp_path, pagesize=A4)
+            elements = []
+            styles = getSampleStyleSheet()
+            
+            # Title
+            title_style = ParagraphStyle(
+                'Title',
+                parent=styles['Heading1'],
+                fontSize=18,
+                alignment=TA_CENTER,
+                textColor=colors.HexColor('#007147')
+            )
+            
+            elements.append(Paragraph("Rapport d'Analyse de Maintenance", title_style))
+            elements.append(Spacer(1, 20))
+            
+            # Summary section
+            if export_options.get('summary', True):
+                elements.append(Paragraph("Résumé Exécutif", styles['Heading2']))
+                
+                summary = results.get('summary', {})
+                summary_data = [
+                    ['Total RDV', str(summary.get('total_rdv', 0))],
+                    ['Total Clients', str(summary.get('total_clients', 0))],
+                    ['Total Équipements', str(summary.get('total_equipment', 0))],
+                    ['Durée moyenne RDV (heures)', str(summary.get('average_rdv_duration_hours', 0))],
+                    ['Total jours d\'immobilisation', str(summary.get('total_days_with_rdv', 0))],
+                    ['Conflits détectés', str(summary.get('conflict_count', 0))]
+                ]
+                
+                summary_table = Table(summary_data)
+                summary_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#4CA27E')),
+                    ('TEXTCOLOR', (0, 0), (0, -1), colors.white),
+                    ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                
+                elements.append(summary_table)
+                elements.append(Spacer(1, 20))
+            
+            # Weekly planning section
+            if export_options.get('weekly_planning', True) and results.get('weekly_planning'):
+                elements.append(Paragraph("Planning Hebdomadaire", styles['Heading2']))
+                
+                weekly_data = [['Semaine', 'RDV', 'Clients', 'Engins', 'Durée Moy. (h)']]
+                for week, data in list(results['weekly_planning'].items())[:10]:  # Limit to first 10 weeks
+                    weekly_data.append([
+                        week,
+                        str(data.get('rdv_count', 0)),
+                        str(data.get('client_count', 0)),
+                        str(data.get('equipment_count', 0)),
+                        str(data.get('avg_rdv_duration_hours', 0))
+                    ])
+                
+                weekly_table = Table(weekly_data)
+                weekly_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4CA27E')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                
+                elements.append(weekly_table)
+                elements.append(Spacer(1, 20))
+            
+            # Build PDF
+            doc.build(elements)
+            
+            return temp_path
+            
+        except Exception as e:
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+            raise e

@@ -1,16 +1,15 @@
-/* Import variables and base styles */
 @import url('variables.css');
 @import url('base.css');
 @import url('layout.css');
 @import url('components.css');
 @import url('buttons.css');
-
-/* Import page-specific styles */
+@import url('responsive.css');
 @import url('pages/home.css');
 @import url('pages/upload.css');
 @import url('pages/comparison.css');
 @import url('pages/legal.css');
 @import url('pages/help.css');
+@import url('pages/analysis.css');
 
 /* Core application styles */
 
@@ -30,10 +29,10 @@ body {
     background-color: #f8fafc;
 }
 
-/* Modern sleek sidebar - Using existing green colors */
+/* Sidebar */
 .sidebar {
     width: 280px;
-    background: linear-gradient(180deg, #007147 0%, #005a38 100%);
+    background: linear-gradient(180deg, var(--primary) 0%, #005a38 100%);
     color: white;
     padding: 0;
     position: fixed;
@@ -45,7 +44,6 @@ body {
     flex-direction: column;
 }
 
-/* Logo area - Enhanced visibility */
 .logo-container {
     text-align: center;
     padding: 2rem 1.5rem;
@@ -57,6 +55,7 @@ body {
 
 .logo {
     width: 140px;
+    align-items: center;
     height: auto;
     filter: brightness(0) invert(1); /* Makes logo white */
     transition: all 0.3s ease;
@@ -67,7 +66,7 @@ body {
     filter: brightness(0) invert(1) drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
 }
 
-/* Navigation menu - Improved spacing and visibility */
+/* Navigation */
 .nav-menu {
     display: flex;
     flex-direction: column;
@@ -134,7 +133,6 @@ body {
     min-height: 100vh;
 }
 
-/* Page header */
 .page-header {
     margin-bottom: 3rem;
     padding-bottom: 2rem;
@@ -214,7 +212,7 @@ body {
     text-decoration: underline;
 }
 
-/* Help Floating Action Button - Updated design */
+/* Help FAB */
 .help-fab {
     position: fixed;
     bottom: 6rem;
@@ -222,7 +220,7 @@ body {
     width: 4rem;
     height: 4rem;
     border-radius: 50%;
-    background: linear-gradient(135deg, #007147 0%, #009d62 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, #009d62 100%);
     color: white;
     border: none;
     box-shadow: 0 6px 20px rgba(0, 113, 71, 0.3);
@@ -292,13 +290,58 @@ body {
     100% { transform: rotate(360deg); }
 }
 
-/* Responsive design */
-@media (max-width: 1200px) {
-    .main-content {
-        padding: 2rem;
-    }
+/* Data tables */
+.table-scroll-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
 }
 
+.data-table {
+    min-width: 900px;
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.9rem;
+    box-shadow: var(--shadow-light);
+}
+
+.data-table th {
+    background-color: var(--primary);
+    color: white;
+    padding: 10px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.data-table td {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.data-table tbody tr:hover {
+    background-color: var(--gray-100);
+}
+
+/* Form controls */
+.form-control {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-base);
+    background-color: white;
+    transition: border-color var(--transition-fast);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(0, 113, 71, 0.1);
+}
+
+/* Responsive */
 @media (max-width: 768px) {
     .sidebar {
         width: 100%;
