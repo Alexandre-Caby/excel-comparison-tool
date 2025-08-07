@@ -4,9 +4,9 @@
 </div>
 
 <div class="legal-tabs">
-    <button class="legal-tab active" data-doc="terms_of_use.md">Conditions d'utilisation</button>
-    <button class="legal-tab" data-doc="privacy_policy.md">Politique de confidentialité</button>
-    <button class="legal-tab" data-doc="licence.md">Licence</button>
+    <button class="legal-tab active" data-doc="terms">Conditions d'utilisation</button>
+    <button class="legal-tab" data-doc="privacy">Politique de confidentialité</button>
+    <button class="legal-tab" data-doc="license">Licence</button>
 </div>
 
 <div id="legal-content" class="doc-container">
@@ -17,334 +17,272 @@
 </div>
 
 <script>
-    (function() {
-        const legalContent = document.getElementById('legal-content');
-        let currentDoc = 'terms_of_use.md';
-        
-        // Function to get the backend URL (set by Electron or default for web)
-        function getBackendUrl() {
-            return window.BACKEND_URL || 'http://localhost:5000';
+(function() {
+    const legalContent = document.getElementById('legal-content');
+    let currentDoc = 'terms';
+    
+    // Fallback content for each document
+    const fallbackContent = {
+        terms: {
+            title: 'Conditions d\'utilisation',
+            content: `
+                <h1>Conditions d'utilisation - ECT Technis</h1>
+                
+                <h2>1. Acceptation des conditions</h2>
+                <p>En utilisant ECT Technis, vous acceptez les présentes conditions d'utilisation.</p>
+                
+                <h2>2. Description du service</h2>
+                <p>ECT Technis est un outil de comparaison de fichiers Excel conçu pour :</p>
+                <ul>
+                    <li>Comparer des données entre différents fichiers Excel</li>
+                    <li>Générer des rapports de différences</li>
+                    <li>Analyser les données PHP</li>
+                    <li>Exporter les résultats dans différents formats</li>
+                </ul>
+                
+                <h2>3. Utilisation autorisée</h2>
+                <p>Vous pouvez utiliser ECT Technis pour :</p>
+                <ul>
+                    <li>L'analyse de données professionnelles</li>
+                    <li>La comparaison de fichiers Excel</li>
+                    <li>La génération de rapports</li>
+                </ul>
+                
+                <h2>4. Restrictions</h2>
+                <ul>
+                    <li>Ne pas redistribuer le logiciel sans autorisation</li>
+                    <li>Ne pas modifier le code source</li>
+                    <li>Utilisation limitée aux besoins légitimes</li>
+                </ul>
+                
+                <h2>5. Responsabilité</h2>
+                <p>L'utilisateur est responsable de :</p>
+                <ul>
+                    <li>La validité des données traitées</li>
+                    <li>La sauvegarde de ses fichiers</li>
+                    <li>L'utilisation conforme du logiciel</li>
+                </ul>
+                
+                <h2>6. Support</h2>
+                <p>Le support technique est disponible pendant les heures ouvrables.</p>
+                
+                <h2>7. Modifications</h2>
+                <p>Ces conditions peuvent être modifiées. Les utilisateurs seront informés des changements importants.</p>
+                
+                <p><em>Dernière mise à jour : Janvier 2025</em></p>
+            `
+        },
+        privacy: {
+            title: 'Politique de confidentialité',
+            content: `
+                <h1>Politique de confidentialité - ECT Technis</h1>
+                
+                <h2>1. Collecte des données</h2>
+                <p>ECT Technis ne collecte aucune donnée personnelle. L'application fonctionne localement sur votre ordinateur.</p>
+                
+                <h2>2. Traitement des fichiers</h2>
+                <p>Vos fichiers Excel sont traités localement :</p>
+                <ul>
+                    <li>Aucune donnée n'est envoyée vers des serveurs externes</li>
+                    <li>Les fichiers temporaires sont supprimés automatiquement</li>
+                    <li>Aucune sauvegarde n'est effectuée sans votre accord</li>
+                </ul>
+                
+                <h2>3. Données temporaires</h2>
+                <p>L'application peut créer des fichiers temporaires pour :</p>
+                <ul>
+                    <li>Le traitement des comparaisons</li>
+                    <li>La génération de rapports</li>
+                    <li>Le cache des résultats</li>
+                </ul>
+                <p>Ces fichiers sont automatiquement supprimés à la fermeture de l'application.</p>
+                
+                <h2>4. Logs d'application</h2>
+                <p>L'application peut créer des logs techniques pour :</p>
+                <ul>
+                    <li>Le débogage</li>
+                    <li>L'amélioration des performances</li>
+                    <li>La résolution de problèmes</li>
+                </ul>
+                <p>Ces logs ne contiennent pas de données sensibles de vos fichiers.</p>
+                
+                <h2>5. Sécurité</h2>
+                <p>Nous nous engageons à :</p>
+                <ul>
+                    <li>Protéger l'intégrité de vos données</li>
+                    <li>Ne pas accéder à vos fichiers sans autorisation</li>
+                    <li>Maintenir la confidentialité de vos informations</li>
+                </ul>
+                
+                <h2>6. Contact</h2>
+                <p>Pour toute question concernant cette politique, contactez le support technique.</p>
+                
+                <p><em>Dernière mise à jour : Janvier 2025</em></p>
+            `
+        },
+        license: {
+            title: 'Licence',
+            content: `
+                <h1>Licence - ECT Technis</h1>
+                
+                <h2>Licence d'utilisation</h2>
+                <p>ECT Technis est fourni sous licence propriétaire limitée.</p>
+                
+                <h2>Droits accordés</h2>
+                <p>Cette licence vous accorde le droit de :</p>
+                <ul>
+                    <li>Utiliser le logiciel à des fins professionnelles</li>
+                    <li>Installer l'application sur vos ordinateurs</li>
+                    <li>Créer des sauvegardes pour usage personnel</li>
+                </ul>
+                
+                <h2>Restrictions</h2>
+                <ul>
+                    <li>Redistribution interdite sans autorisation écrite</li>
+                    <li>Modification du code source interdite</li>
+                    <li>Utilisation limitée aux besoins légitimes</li>
+                    <li>Pas de rétroingénierie autorisée</li>
+                </ul>
+                
+                <h2>Propriété intellectuelle</h2>
+                <p>Tous les droits de propriété intellectuelle sur ECT Technis sont réservés.</p>
+                
+                <h2>Garantie</h2>
+                <p>Le logiciel est fourni "en l'état" sans garantie explicite ou implicite.</p>
+                
+                <h2>Limitation de responsabilité</h2>
+                <p>En aucun cas nous ne pourrons être tenus responsables de dommages directs ou indirects résultant de l'utilisation du logiciel.</p>
+                
+                <h2>Résiliation</h2>
+                <p>Cette licence prend fin automatiquement en cas de non-respect des conditions.</p>
+                
+                <p><em>Version de licence : 1.0 - Janvier 2025</em></p>
+            `
         }
+    };
+    
+    // Function to load legal document with fallback
+    function loadDocument(docType) {
+        legalContent.innerHTML = `
+            <div class="loading-docs">
+                <div class="loading-spinner"></div>
+                <p>Chargement du document...</p>
+            </div>
+        `;
         
-        // Enhanced markdown to HTML conversion (same as help page)
-        function enhancedMarkdownToHtml(markdown) {
-            // Process the table of contents first
-            let toc = '<div class="toc-container"><h2>Table des Matières</h2><ul class="toc-list">';
-            let tocItems = [];
-            
-            // Extract headings for TOC
-            const headingRegex = /^(#{1,3})\s+(.+)$/gm;
-            let match;
-            while ((match = headingRegex.exec(markdown)) !== null) {
-                const level = match[1].length;
-                const text = match[2].trim();
-                const id = text.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
-                
-                tocItems.push({
-                    level: level,
-                    text: text,
-                    id: id
-                });
-            }
-            
-            // Build TOC HTML (only if there are multiple headings)
-            if (tocItems.length > 1) {
-                tocItems.forEach(item => {
-                    toc += `<li class="toc-item toc-level-${item.level}"><a href="#${item.id}" class="toc-link">${item.text}</a></li>`;
-                });
-                toc += '</ul></div>';
-            } else {
-                toc = ''; // No TOC for single section documents
-            }
-            
-            // Replace Markdown syntax with HTML
-            let html = markdown
-                // Headers with IDs
-                .replace(/^# (.+)$/gm, (match, title) => {
-                    const id = title.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
-                    return `<h1 id="${id}" class="legal-heading legal-h1">${title}</h1>`;
-                })
-                .replace(/^## (.+)$/gm, (match, title) => {
-                    const id = title.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
-                    return `<h2 id="${id}" class="legal-heading legal-h2">${title}</h2>`;
-                })
-                .replace(/^### (.+)$/gm, (match, title) => {
-                    const id = title.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
-                    return `<h3 id="${id}" class="legal-heading legal-h3">${title}</h3>`;
-                })
-                .replace(/^#### (.+)$/gm, (match, title) => {
-                    const id = title.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
-                    return `<h4 id="${id}" class="legal-heading legal-h4">${title}</h4>`;
-                })
-                
-                // Lists
-                .replace(/^\s*(?:[0-9]+\.|\-|\*)\s+(.+)$/gm, function(match, item) {
-                    const isNumbered = match.trim().match(/^[0-9]+\./);
-                    return `<li class="legal-list-item">${item}</li>`;
-                })
-                
-                // Bold and Italic
-                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                
-                // Links
-                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
-                    if (url.startsWith('#')) {
-                        return `<a href="${url}" class="legal-link toc-link">${text}</a>`;
-                    } else {
-                        return `<a href="${url}" class="legal-link" target="_blank" rel="noopener noreferrer">${text}</a>`;
-                    }
-                })
-                
-                // Code blocks (for legal references)
-                .replace(/`([^`]+)`/g, '<code class="legal-code">$1</code>')
-                
-                // Code blocks (multi-line)
-                .replace(/```([^```]+)```/g, '<pre class="legal-code-block"><code>$1</code></pre>');
-
-            // Convert newlines to paragraphs
-            const paragraphs = html.split(/\n\n+/);
-            html = paragraphs.map(p => {
-                p = p.trim();
-                
-                // Skip if already wrapped in HTML tag
-                if (p.startsWith('<h') || p.startsWith('<li') || p.startsWith('<pre') || p === '') return p;
-                
-                // Wrap content in paragraph tags if it contains text
-                if (p.match(/\S/)) return `<p class="legal-paragraph">${p}</p>`;
-                
-                return p;
-            }).join('');
-            
-            // Fix lists - wrap consecutive li elements
-            html = html.replace(/(<li class="legal-list-item">.*?<\/li>)\s*(<li class="legal-list-item">)/gs, '$1\n<li class="legal-list-item">');
-            
-            // Wrap series of li in ul or ol
-            const listItemRegex = /<li class="legal-list-item">.*?<\/li>/gs;
-            let lastIndex = 0;
-            let result = '';
-            let listItems;
-            
-            while ((listItems = listItemRegex.exec(html)) !== null) {
-                result += html.substring(lastIndex, listItems.index);
-                
-                const isNumbered = html.substring(Math.max(0, listItems.index - 20), listItems.index).match(/[0-9]+\./);
-                const listTag = isNumbered ? 'ol' : 'ul';
-                
-                let listContent = listItems[0];
-                let nextItemMatch;
-                let nextIndex = listItems.index + listItems[0].length;
-                
-                while ((nextItemMatch = /<li class="legal-list-item">.*?<\/li>/s.exec(html.substring(nextIndex))) !== null && 
-                      html.substring(nextIndex, nextIndex + nextItemMatch.index).trim() === '') {
-                    listContent += nextItemMatch[0];
-                    nextIndex += nextItemMatch.index + nextItemMatch[0].length;
-                }
-                
-                result += `<${listTag} class="legal-list">${listContent}</${listTag}>`;
-                lastIndex = nextIndex;
-                listItemRegex.lastIndex = nextIndex;
-            }
-            
-            result += html.substring(lastIndex);
-            
-            return toc + '<div class="legal-content">' + result + '</div>';
-        }
-        
-        // Function to wait for backend to be ready (with timeout)
-        async function waitForBackend() {
-            const backendUrl = getBackendUrl();
-            let retries = 0;
-            const maxRetries = 20;
-            
-            while (retries < maxRetries) {
-                try {
-                    const response = await fetch(`${backendUrl}/health`, { 
-                        method: 'GET',
-                        headers: {
-                            'Accept': 'application/json'
-                        }
-                    });
-                    
-                    if (response.ok) {
-                        console.log('Backend is ready for legal page');
-                        return true;
-                    }
-                } catch (error) {
-                    console.log(`Waiting for backend for legal page... (attempt ${retries + 1})`);
-                }
-                
-                retries++;
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-            
-            throw new Error('Backend not available after multiple attempts');
-        }
-        
-        // Function to debug available docs
-        async function debugAvailableLegalDocs() {
-            try {
-                const backendUrl = getBackendUrl();
-                const response = await fetch(`${backendUrl}/api/docs/list`);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('Available legal documentation files:', data.legal_files);
-                    return data;
-                } else {
-                    console.error('Failed to get legal docs list:', response.status);
-                    return null;
-                }
-            } catch (error) {
-                console.error('Error getting legal docs list:', error);
-                return null;
-            }
-        }
-        
-        // Load and display document
-        async function loadDocument(filename) {
-            legalContent.innerHTML = `
-                <div class="loading-docs">
-                    <div class="loading-spinner"></div>
-                    <p>Chargement du document...</p>
-                </div>
-            `;
-            
-            try {
-                // Wait for backend to be ready
-                await waitForBackend();
-                
-                const backendUrl = getBackendUrl();
-                console.log('Loading legal document from:', `${backendUrl}/docs/legal/${filename}`);
-                
-                // Add a small delay to ensure backend is fully ready
-                await new Promise(resolve => setTimeout(resolve, 100));
-                
-                const response = await fetch(`${backendUrl}/docs/legal/${filename}`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'text/plain',
-                        'Content-Type': 'text/plain; charset=utf-8'
-                    }
-                });
-                
-                if (!response.ok) {
-                    // Debug available docs if main request fails
-                    await debugAvailableLegalDocs();
-                    throw new Error(`Failed to load ${filename}: ${response.status} ${response.statusText}`);
-                }
-                
-                const markdown = await response.text();
-                
-                if (!markdown || markdown.trim().length === 0) {
-                    throw new Error('Loaded markdown content is empty');
-                }
-                
-                console.log('Successfully loaded legal markdown content, length:', markdown.length);
-                
-                // Format the markdown into beautiful HTML
-                const formattedContent = enhancedMarkdownToHtml(markdown);
-                
-                legalContent.innerHTML = `
-                    <div class="legal-card">
-                        <div class="card-body legal-body">
-                            ${formattedContent}
-                        </div>
-                    </div>
-                `;
-                
-                // Remove target="_blank" from internal links
-                legalContent.querySelectorAll('a.legal-link').forEach(a => {
-                    if (a.getAttribute('href')?.startsWith('#')) {
-                        a.removeAttribute('target');
-                    }
-                });
-                
-                // Add smooth scrolling for TOC links
-                document.querySelectorAll('.toc-link').forEach(link => {
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        const targetId = e.target.getAttribute('href').substring(1);
-                        const targetElement = document.getElementById(targetId);
-                        
-                        if (targetElement) {
-                            targetElement.scrollIntoView({ 
-                                behavior: 'smooth',
-                                block: 'start'
-                            });
-                        }
-                    });
-                });
-                
-                console.log('Legal content loaded successfully');
-                
-            } catch (error) {
-                console.error('Error loading legal document:', error);
-                
-                legalContent.innerHTML = `
-                    <div class="error-box">
-                        <h3>Erreur de chargement</h3>
-                        <p>Impossible de charger le document "${filename}": ${error.message}</p>
-                        <p><strong>Backend URL:</strong> ${getBackendUrl()}</p>
-                        <button onclick="loadLegalDocument('${filename}')" class="btn btn-primary" style="margin: 0.5rem;">Réessayer</button>
-                        <button onclick="window.debugLegalDocs()" class="btn btn-secondary" style="margin: 0.5rem;">Debug Info</button>
-                    </div>
-                `;
-            }
-        }
-        
-        // Global functions for retry and debug
-        window.loadLegalDocument = loadDocument;
-        window.debugLegalDocs = async function() {
-            const info = await debugAvailableLegalDocs();
-            console.log('Legal debug info:', info);
-            alert('Debug information logged to console. Check browser developer tools.');
+        const backendUrl = window.BACKEND_URL || 'http://localhost:5000';
+        const fileMap = {
+            'terms': 'terms_of_use.md',
+            'privacy': 'privacy_policy.md', 
+            'license': 'licence.md'
         };
         
-        // Set up tab functionality
-        document.querySelectorAll('.legal-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                // Remove active class from all tabs
-                document.querySelectorAll('.legal-tab').forEach(t => t.classList.remove('active'));
-                
-                // Add active class to clicked tab
-                tab.classList.add('active');
-                
-                // Load the selected document
-                const filename = tab.getAttribute('data-doc');
-                currentDoc = filename;
-                loadDocument(filename);
-            });
-        });
+        const filename = fileMap[docType];
+        const fallback = fallbackContent[docType];
         
-        // Handle both immediate loading and backend ready event
-        function initializeLegal() {
-            console.log('Initializing legal page...');
+        // Only try to load from backend if URL is available
+        if (window.BACKEND_URL && filename) {
+            fetch(`${backendUrl}/docs/legal/${filename}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load document');
+                    }
+                    return response.text();
+                })
+                .then(markdown => {
+                    if (markdown && markdown.trim().length > 0) {
+                        // Simple markdown to HTML conversion
+                        const html = markdown
+                            .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                            .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                            .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                            .replace(/\n\n/g, '</p><p>')
+                            .replace(/^(.+)$/gm, '<p>$1</p>')
+                            .replace(/<p><h/g, '<h')
+                            .replace(/<\/h([1-6])><\/p>/g, '</h$1>');
+                        
+                        legalContent.innerHTML = `
+                            <div class="legal-card">
+                                <div class="card-body legal-body">
+                                    ${html}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        throw new Error('Empty content');
+                    }
+                })
+                .catch(error => {
+                    console.log('Using fallback legal content:', error.message);
+                    showFallbackContent(fallback);
+                });
+        } else {
+            // No backend URL available, use fallback immediately
+            console.log('No backend URL available, using fallback legal content');
+            showFallbackContent(fallback);
+        }
+    }
+    
+    function showFallbackContent(fallback) {
+        legalContent.innerHTML = `
+            <div class="legal-card">
+                <div class="card-body legal-body">
+                    ${fallback.content}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Set up tab functionality
+    document.querySelectorAll('.legal-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active class from all tabs
+            document.querySelectorAll('.legal-tab').forEach(t => t.classList.remove('active'));
+            
+            // Add active class to clicked tab
+            tab.classList.add('active');
+            
+            // Load the selected document
+            const docType = tab.getAttribute('data-doc');
+            currentDoc = docType;
+            loadDocument(docType);
+        });
+    });
+    
+    // Load initial document
+    function initializeLegal() {
+        loadDocument(currentDoc);
+    }
+    
+    // Load content immediately if DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeLegal);
+    } else {
+        initializeLegal();
+    }
+    
+    // Also listen for backend ready event
+    window.addEventListener('backendReady', initializeLegal);
+    
+    // If BACKEND_URL becomes available later, try loading again
+    let checkBackendUrl = setInterval(() => {
+        if (window.BACKEND_URL && legalContent.innerHTML.includes('Chargement du document')) {
+            clearInterval(checkBackendUrl);
             loadDocument(currentDoc);
         }
-        
-        // Wait for window.BACKEND_URL to be available
-        function waitForBackendUrl() {
-            if (window.BACKEND_URL) {
-                console.log('Backend URL available for legal page:', window.BACKEND_URL);
-                initializeLegal();
-            } else {
-                console.log('Waiting for backend URL for legal page...');
-                setTimeout(waitForBackendUrl, 100);
+    }, 500);
+    
+    // Stop checking after 10 seconds
+    setTimeout(() => {
+        clearInterval(checkBackendUrl);
+        if (legalContent.innerHTML.includes('Chargement du document')) {
+            const fallback = fallbackContent[currentDoc];
+            if (fallback) {
+                showFallbackContent(fallback);
             }
         }
-        
-        // Listen for backend ready event (from Electron)
-        window.addEventListener('backendReady', (event) => {
-            console.log('Backend ready event received for legal page:', event.detail);
-            initializeLegal();
-        });
-        
-        // Start waiting for backend URL
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', waitForBackendUrl);
-        } else {
-            waitForBackendUrl();
-        }
-    })();
+    }, 10000);
+})();
 </script>
