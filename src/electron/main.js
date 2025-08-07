@@ -49,65 +49,6 @@ function setupLogging() {
   return logFile;
 }
 
-// Helper function to safely execute JavaScript in renderer
-async function safeExecuteJS(script, fallback = null, retries = 3) {
-  if (!mainWindow || mainWindow.isDestroyed()) {
-    console.warn('Cannot execute JS: window is destroyed or null');
-    return false;
-  }
-
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      // Wait for the webContents to be ready
-      if (!mainWindow.webContents.isLoading() && mainWindow.webContents.getURL()) {
-        const result = await mainWindow.webContents.executeJavaScript(script);
-        return result;
-      } else {
-        console.log(`Waiting for webContents to be ready (attempt ${attempt})`);
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-    } catch (error) {
-      console.error(`JavaScript execution error (attempt ${attempt}):`, error.message);
-      
-      if (attempt === retries && fallback) {
-        try {
-          console.log('Attempting fallback script...');
-          return await mainWindow.webContents.executeJavaScript(fallback);
-        } catch (fallbackError) {
-          console.error('Fallback script also failed:', fallbackError.message);
-          return false;
-        }
-      }
-      
-      if (attempt < retries) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-    }
-  }
-  
-  return false;
-}
-
-// Helper function to wait for DOM ready
-function waitForDOMReady() {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error('DOM ready timeout'));
-    }, 10000);
-
-    mainWindow.webContents.once('dom-ready', () => {
-      clearTimeout(timeout);
-      resolve();
-    });
-
-    // If already ready
-    if (!mainWindow.webContents.isLoading()) {
-      clearTimeout(timeout);
-      resolve();
-    }
-  });
-}
-
 function createWindow() {
   setupLogging();
   
@@ -137,87 +78,54 @@ function createWindow() {
     })
     .catch((error) => {
       console.error('Failed to load loading screen:', error);
-      mainWindow.show(); // Show anyway
+      mainWindow.show();
     });
 
   // Start Python backend
   startPythonServer();
 
-  // Show startup progress with safe execution
-  let startupProgress = 0;
-  const startupInterval = setInterval(async () => {
-    if (startupProgress < 90) {
-      startupProgress += 5;
-      await safeExecuteJS(`
-        try {
-          const progressBar = document.getElementById('progress-bar');
-          const statusMessage = document.getElementById('status-message');
-          if (progressBar) progressBar.style.width = '${startupProgress}%';
-          if (statusMessage) statusMessage.innerText = 'Démarrage du serveur en cours...';
-        } catch (e) {
-          console.warn('Progress update failed:', e);
-        }
-      `);
-    }
-  }, 300);
-
-  // Wait for backend with better error handling
+  // Wait for backend and then load main application
   waitForBackend()
     .then(async (port) => {
-        clearInterval(startupInterval);
-        console.log(`Backend ready on port ${port}`);
-        
-        // Update progress to 100%
-        await safeExecuteJS(`
-            try {
-                const progressBar = document.getElementById('progress-bar');
-                const statusMessage = document.getElementById('status-message');
-                if (progressBar) progressBar.style.width = '100%';
-                if (statusMessage) statusMessage.innerText = 'Chargement de l\'application...';
-            } catch (e) {
-                console.warn('Final progress update failed:', e);
-            }
+      console.log(`Backend ready on port ${port}`);
+      
+      // Simple progress update
+      try {
+        await mainWindow.webContents.executeJavaScript(`
+          const progressBar = document.getElementById('progress-bar');
+          const statusMessage = document.getElementById('status-message');
+          if (progressBar) progressBar.style.width = '100%';
+          if (statusMessage) statusMessage.innerText = 'Chargement de l\'application...';
         `);
+      } catch (error) {
+        console.log('Progress update failed, but continuing:', error.message);
+      }
 
-        // Create a global backend URL variable that will be exposed to renderer
-        global.BACKEND_URL = `http://localhost:${port}`;
-        
-        // Load the main application with simplified approach
-        setTimeout(() => {
-            try {
-                mainWindow.loadFile(path.join(__dirname, '../frontend/index.html'))
-                    .then(() => {
-                        console.log('Main application loaded successfully');
-                        
-                        // Inject the backend URL directly - simpler approach
-                        mainWindow.webContents.executeJavaScript(`
-                            window.BACKEND_URL = 'http://localhost:${port}';
-                            console.log('Backend URL set to:', window.BACKEND_URL);
-                            
-                            // Set a flag to indicate backend is ready
-                            localStorage.setItem('backendUrl', 'http://localhost:${port}');
-                            localStorage.setItem('backendReady', 'true');
-                            
-                            // No complex event system, just a simple global
-                            true;
-                        `).catch(err => {
-                            console.error('Failed to set backend URL:', err);
-                        });
-                    })
-                    .catch((loadError) => {
-                        console.error('Error loading main HTML file:', loadError);
-                        showError('Failed to load application interface');
-                    });
-            } catch (error) {
-                console.error('Error during app initialization:', error);
-                showError('Failed to initialize application');
-            }
-        }, 500);
+      // Load main application after a short delay
+      setTimeout(async () => {
+        try {
+          await mainWindow.loadFile(path.join(__dirname, '../frontend/index.html'));
+          console.log('Main application loaded successfully');
+          
+          // Set backend URL - simple approach
+          try {
+            await mainWindow.webContents.executeJavaScript(`
+              window.BACKEND_URL = 'http://localhost:${port}';
+              console.log('Backend URL set to:', window.BACKEND_URL);
+            `);
+          } catch (error) {
+            console.log('Backend URL setup failed, but application should still work:', error.message);
+          }
+          
+        } catch (loadError) {
+          console.error('Error loading main application:', loadError);
+          showError('Failed to load application interface');
+        }
+      }, 500);
     })
     .catch(async (error) => {
-        clearInterval(startupInterval);
-        console.error('Backend failed to start:', error);
-        await showError(`Impossible de démarrer le serveur: ${error.message}`);
+      console.error('Backend failed to start:', error);
+      await showError(`Impossible de démarrer le serveur: ${error.message}`);
     });
 
   mainWindow.on('closed', () => {
@@ -343,17 +251,6 @@ async function waitForBackend() {
       
       if (response.status === 200) {
         console.log('Backend is ready');
-        
-        // Test if docs endpoint is working
-        try {
-          const docsTest = await axios.get('http://localhost:5000/api/docs/list', { 
-            timeout: 2000 
-          });
-          console.log('Docs endpoint is working');
-        } catch (docsError) {
-          console.warn('Docs endpoint test failed:', docsError.message);
-        }
-        
         return 5000;
       }
     } catch (error) {
@@ -372,8 +269,8 @@ async function showError(message) {
   console.error('Application Error:', message);
   
   if (mainWindow && !mainWindow.isDestroyed()) {
-    const errorScript = `
-      try {
+    try {
+      await mainWindow.webContents.executeJavaScript(`
         document.body.innerHTML = \`
           <div style="padding: 20px; font-family: Arial, sans-serif; text-align: center;">
             <h2 style="color: #d32f2f;">Application Error</h2>
@@ -382,14 +279,10 @@ async function showError(message) {
             <button onclick="window.location.reload()" style="padding: 8px 16px; margin-top: 10px;">Retry</button>
           </div>
         \`;
-        true;
-      } catch (e) {
-        console.error('Error displaying error message:', e);
-        false;
-      }
-    `;
-    
-    await safeExecuteJS(errorScript);
+      `);
+    } catch (error) {
+      console.error('Failed to display error message:', error);
+    }
   }
 }
 
