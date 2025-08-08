@@ -110,6 +110,7 @@ jobs:
         $requiredFiles = @(
           "src/backend/app.py",
           "src/electron/main.js", 
+          "src/electron/preload.js"
           "src/frontend/index.html",
           "src/frontend/images/icon_excel_comparison.ico",
           "package.json",
@@ -132,13 +133,13 @@ jobs:
     
     - name: Prepare secure build
       run: |
-        # Don't create secure_src - keep original src structure
         Write-Host "Using original src directory structure..."
         
         # Just verify files exist
         $criticalFiles = @(
           "src\backend\app.py",
-          "src\electron\main.js", 
+          "src\electron\main.js",
+          "src\electron\preload.js",
           "src\frontend\index.html",
           "src\frontend\images\icon_excel_comparison.ico"
         )
