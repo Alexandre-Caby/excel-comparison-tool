@@ -772,7 +772,7 @@ def export_analysis_internal(data):
     )
 
 # Serve documentation files
-@app.route('/docs/<path:filename>')
+@app.route('/api/docs/<path:filename>')
 def serve_docs(filename):
     """Serve documentation files from docs directory"""
     docs_dir = get_docs_directory()
@@ -807,7 +807,7 @@ def serve_docs(filename):
         logger.error(f"Error serving file {filename}: {str(e)}")
         return jsonify({'error': f'Error reading file: {str(e)}'}), 500
 
-@app.route('/docs/legal/<path:filename>')
+@app.route('/api/docs/legal/<path:filename>')
 def serve_legal_docs(filename):
     """Serve legal documentation files"""
     legal_docs_dir = get_legal_docs_directory()
