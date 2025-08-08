@@ -1,7 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
-const axios = require('axios');
 const fs = require('fs');
 
 let mainWindow;
@@ -247,11 +246,11 @@ async function waitForBackend() {
         throw new Error('Python process was terminated');
       }
       
-      const response = await axios.get('http://localhost:5000/health', { 
-        timeout: 2000 
+      const response = await fetch('http://localhost:5000/health', { 
+        signal: AbortSignal.timeout(2000) // 2 second timeout
       });
-      
-      if (response.status === 200) {
+
+      if (response.ok) {
         console.log('Backend is ready');
         return 5000;
       }
