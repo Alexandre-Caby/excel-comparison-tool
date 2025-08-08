@@ -156,11 +156,12 @@
                         }
                     })
                     .catch(error => {
-                        console.warn('Fallback content used due to error:', error);
+                        console.log('Fallback content used due to error:', error);
                     });
             }
         } catch (err) {
             console.error('Error rendering help content:', err);
+            renderHTMLContent(fallbackContent);
         }
     }
 
