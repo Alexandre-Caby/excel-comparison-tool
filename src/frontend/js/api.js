@@ -42,7 +42,7 @@ class API {
     // Documentation methods
     async loadUserGuide() {
         try {
-            const response = await fetch(`${this.baseURL}/docs/user_guide.md`);
+            const response = await fetch(`${this.baseURL}/api/docs/user_guide.md`);
             if (!response.ok) {
                 throw new Error(`Failed to load user guide: ${response.status}`);
             }
@@ -59,7 +59,7 @@ class API {
     
     async loadLegalDocument(filename) {
         try {
-            const response = await fetch(`${this.baseURL}/docs/legal/${filename}`);
+            const response = await fetch(`${this.baseURL}/api/docs/legal/${filename}`);
             if (!response.ok) {
                 throw new Error(`Failed to load legal document: ${response.status}`);
             }

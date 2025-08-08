@@ -96,12 +96,10 @@ class ECTApp {
                 this.initAnalysisPage();
                 break;
             case 'help':
-                // Help page handles its own content loading via embedded JavaScript
-                console.log('Help page loaded - content handled by page script');
+                this.initHelpPage();
                 break;
             case 'legal':
-                // Legal page handles its own content loading via embedded JavaScript
-                console.log('Legal page loaded - content handled by page script');
+                this.initLegalPage();
                 break;
         }
     }
@@ -189,6 +187,138 @@ class ECTApp {
                 console.error('Error initializing analysis page:', error);
             }
         }, 100);
+    }
+    
+    async initHelpPage() {
+        // console.log('Initializing help page...');
+        const helpContent = document.getElementById('help-content');
+        if (!helpContent) return;
+        
+        // Show loading state
+        helpContent.innerHTML = `
+            <div class="loading-docs">
+                <div class="loading-spinner"></div>
+                <p>Chargement de la documentation...</p>
+            </div>
+        `;
+        
+        try {
+            // Directly fetch the markdown file
+            const response = await fetch(`${window.BACKEND_URL || 'http://localhost:5000'}/api/docs/user_guide.md`);
+            
+            if (response.ok) {
+                const markdown = await response.text();
+                const html = this.simpleMarkdownToHtml(markdown);
+                
+                // Display the content
+                helpContent.innerHTML = `
+                    <div class="help-card">
+                        <div class="card-body help-body">
+                            ${html}
+                        </div>
+                    </div>
+                `;
+                console.log('Help content loaded successfully');
+            } else {
+                throw new Error(`Failed to load help: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error loading help content:', error);
+            // Show fallback content
+            helpContent.innerHTML = `
+                <div class="help-card">
+                    <div class="card-body help-body">
+                        <!-- Your fallback help content -->
+                        <h1>Guide d'utilisation - ECT Technis</h1>
+                        <h2>Démarrage rapide</h2>
+                        <!-- Rest of your fallback content -->
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    async initLegalPage() {
+        // console.log('Initializing legal page...');
+        const legalContent = document.getElementById('legal-content');
+        if (!legalContent) return;
+        
+        // Set up tab handling
+        const tabs = document.querySelectorAll('.legal-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Update active state
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Load the selected document
+                const docType = tab.getAttribute('data-doc');
+                this.loadLegalDocument(docType);
+            });
+        });
+        
+        // Load initial document
+        const activeTab = document.querySelector('.legal-tab.active');
+        if (activeTab) {
+            const docType = activeTab.getAttribute('data-doc');
+            this.loadLegalDocument(docType);
+        }
+    }
+
+    async loadLegalDocument(docType) {
+        const legalContent = document.getElementById('legal-content');
+        if (!legalContent) return;
+        
+        // Map doc type to filename
+        const fileMap = {
+            'terms': 'terms_of_use.md',
+            'privacy': 'privacy_policy.md', 
+            'license': 'licence.md'
+        };
+        
+        const filename = fileMap[docType];
+        if (!filename) return;
+        
+        // Show loading state
+        legalContent.innerHTML = `
+            <div class="loading-docs">
+                <div class="loading-spinner"></div>
+                <p>Chargement des mentions légales...</p>
+            </div>
+        `;
+        
+        try {
+            // Directly fetch the markdown file
+            const response = await fetch(`${window.BACKEND_URL || 'http://localhost:5000'}/api/docs/legal/${filename}`);
+            
+            if (response.ok) {
+                const markdown = await response.text();
+                const html = this.simpleMarkdownToHtml(markdown);
+                
+                // Display the content
+                legalContent.innerHTML = `
+                    <div class="legal-card">
+                        <div class="card-body legal-body">
+                            ${html}
+                        </div>
+                    </div>
+                `;
+                console.log(`Legal document ${docType} loaded successfully`);
+            } else {
+                throw new Error(`Failed to load legal document: ${response.status}`);
+            }
+        } catch (error) {
+            console.error(`Error loading legal document ${docType}:`, error);
+            // Show fallback content - use your existing fallback content
+            legalContent.innerHTML = `
+                <div class="legal-card">
+                    <div class="card-body legal-body">
+                        <h1>Mentions Légales - ${docType.toUpperCase()}</h1>
+                        <p>Impossible de charger le document. Veuillez réessayer plus tard.</p>
+                    </div>
+                </div>
+            `;
+        }
     }
     
     // Simple markdown to HTML converter
