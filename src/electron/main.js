@@ -56,8 +56,9 @@ function createWindow() {
     width: 1400,
     height: 900,
     webPreferences: {
-      nodeIntegration: false,
       contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
       enableRemoteModule: false,
       webSecurity: true
     },
@@ -111,6 +112,7 @@ function createWindow() {
           try {
             await mainWindow.webContents.executeJavaScript(`
               window.BACKEND_URL = 'http://localhost:${port}';
+              window.localStorage.setItem('BACKEND_URL', 'http://localhost:${port}');
               console.log('Backend URL set to:', window.BACKEND_URL);
             `);
           } catch (error) {
