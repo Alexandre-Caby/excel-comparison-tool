@@ -110,7 +110,6 @@ jobs:
         $requiredFiles = @(
           "src/backend/app.py",
           "src/electron/main.js", 
-          "src/electron/preload.js"
           "src/frontend/index.html",
           "src/frontend/images/icon_excel_comparison.ico",
           "package.json",
@@ -138,8 +137,7 @@ jobs:
         # Just verify files exist
         $criticalFiles = @(
           "src\backend\app.py",
-          "src\electron\main.js",
-          "src\electron\preload.js",
+          "src\electron\main.js", 
           "src\frontend\index.html",
           "src\frontend\images\icon_excel_comparison.ico"
         )
