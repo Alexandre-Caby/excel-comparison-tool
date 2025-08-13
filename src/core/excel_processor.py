@@ -426,7 +426,6 @@ class ExcelProcessor:
                                     if pd.notna(parsed):
                                         return parsed.strftime('%H:%M:%S')
                                     else:
-                                        # Try manual parsing for formats like "1900-01-25 12:00:00"
                                         if ' ' in dt_str:
                                             time_part = dt_str.split(' ')[-1]
                                             if ':' in time_part:
@@ -437,8 +436,7 @@ class ExcelProcessor:
                         
                         df_copy[time_col] = df_copy[time_col].apply(extract_time_from_datetime_string)
                         break
-        
-        # CRITICAL FIX: Save original date strings before conversion to allow proper parsing later
+
         date_columns = ['Date de Début', 'Date de Fin', 'Butée Intervention']
         for date_col in date_columns:
             if date_col in df_copy.columns:

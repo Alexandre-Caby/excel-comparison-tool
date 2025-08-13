@@ -109,7 +109,7 @@
                             </div>
                             <div class="checkbox-item">
                                 <input type="checkbox" id="equipment-analysis" checked>
-                                <label for="equipment-analysis">Analyse des engins</label>
+                                <label for="equipment-analysis">Analyse des séries</label>
                             </div>
                             <div class="checkbox-item">
                                 <input type="checkbox" id="concatenation-analysis" checked>
@@ -223,15 +223,15 @@
         <div id="equipment-section" class="analysis-section">
             <div class="card">
                 <div class="card-header">
-                    <h4>🚂 Analyse des engins</h4>
+                    <h4>🚂 Analyse des séries</h4>
                     <button class="info-toggle" data-target="equipment-info">ℹ️</button>
                 </div>
                 <div class="card-info" id="equipment-info">
                     <strong>Comment interpréter les résultats :</strong>
                     <ul>
-                        <li><strong>RDV Total :</strong> Nombre total de rendez-vous programmés pour cet engin</li>
+                        <li><strong>RDV Total :</strong> Nombre total de rendez-vous programmés pour cette série</li>
                         <li><strong>RDV Valides/Invalides :</strong> Les RDV invalides ont des dates manquantes ou incorrectes et sont exclus des calculs de durée</li>
-                        <li><strong>Jours d'immobilisation :</strong> Nombre de jours calendaires distincts où l'engin est immobilisé</li>
+                        <li><strong>Jours d'immobilisation :</strong> Nombre de jours calendaires distincts où la série est immobilisée</li>
                         <li><strong>Heures d'immobilisation :</strong> Jours d'immobilisation × 24h</li>
                         <li><strong>Durée moyenne :</strong> Heures totales ÷ Nombre de RDV valides</li>
                     </ul>
@@ -253,15 +253,18 @@
                     <div class="card-subtitle">Site_Engin_DateDébut_DateFin_Client</div>
                     <button class="info-toggle" data-target="concat-info">ℹ️</button>
                 </div>
-                <div class="card-info" id="concat-info">
-                    <strong>À propos des données concaténées :</strong>
-                    <ul>
-                        <li>Chaque ligne représente un rendez-vous de maintenance unique</li>
-                        <li>Les dates sont au format AAAAMMJJ_HHMM</li>
-                        <li>Les jours sont calculés en prenant compte de la date de début et de fin (incluses)</li>
-                        <li>Les heures sont calculées comme Jours × 24h</li>
-                    </ul>
-                </div>
+                    <div class="card-info" id="concat-info">
+                        <strong>À propos des données concaténées :</strong>
+                        <ul>
+                            <li>Chaque ligne représente <strong>un engin unique</strong> avec ses opérations groupées</li>
+                            <li>Les opérations simultanées ou consécutives sur le même engin sont regroupées</li>
+                            <li>Les dates correspondent à la période totale d'immobilisation de l'engin</li>
+                            <li>Le numéro d'engin affiché est le <strong>numéro de matériel roulant</strong> (colonne C)</li>
+                            <li>Les jours sont calculés de la première date de début à la dernière date de fin</li>
+                            <li>Les heures sont calculées comme Jours × 24h</li>
+                        </ul>
+                        <p><strong>Exemple :</strong> Si un engin a 3 opérations entre le 20/05 et le 22/05, cela apparaîtra comme 1 ligne avec 3 jours d'immobilisation.</p>
+                    </div>
                 <div class="card-body">
                     <div class="filters-section">
                         <div class="filters-container">

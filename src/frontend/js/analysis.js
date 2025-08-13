@@ -431,7 +431,7 @@ class AnalysisManager {
                 <thead>
                     <tr>
                         <th>Site</th>
-                        <th>Engin</th>
+                        <th>Série</th>
                         <th>RDV Total</th>
                         <th>RDV Valides</th>
                         <th>RDV Invalides</th>
@@ -516,10 +516,14 @@ class AnalysisManager {
             
             this.concatenatedData.forEach(item => {
                 if (item.client && item.client.trim()) {
-                    clients.add(item.client.trim());
+                    // Handle multiple clients in one entry
+                    item.client.split(',').forEach(client => {
+                        const trimmedClient = client.trim();
+                        if (trimmedClient) clients.add(trimmedClient);
+                    });
                 }
-                if (item.engin && item.engin.trim()) {
-                    equipment.add(item.engin.trim());
+                if (item.material_number && item.material_number.trim()) {
+                    equipment.add(item.material_number.trim());
                 }
             });
             
@@ -548,7 +552,7 @@ class AnalysisManager {
         const container = document.getElementById('concatenation-content');
         const displayData = data || this.concatenatedData;
         const rows = displayData.slice(0, 100);
-        
+
         let html = `
             <div class="concat-summary">
                 <p><strong>Total:</strong> ${displayData.length} entrées concaténées</p>
@@ -564,7 +568,7 @@ class AnalysisManager {
                             <th>Date début</th>
                             <th>Date fin</th>
                             <th>Client</th>
-                            <th>Opération</th>
+                            <th>Opérations</th>
                             <th>Jours</th>
                             <th>Heures</th>
                         </tr>
@@ -575,7 +579,6 @@ class AnalysisManager {
         rows.forEach(item => {
             const durationDays = item.duration_days || 0;
             const durationHours = Math.round(item.duration_hours || 0);
-            
             html += `
                 <tr>
                     <td>${item.index}</td>
@@ -584,7 +587,7 @@ class AnalysisManager {
                     <td>${this.formatConcatDate(item.date_debut)}</td>
                     <td>${this.formatConcatDate(item.date_fin)}</td>
                     <td>${this.truncateText(item.client, 20)}</td>
-                    <td>${this.truncateText(item.operation, 15)}</td>
+                    <td>${this.truncateText(item.operations_summary || item.operation, 25)}</td>
                     <td><strong>${durationDays}j</strong></td>
                     <td>${durationHours}h</td>
                 </tr>
@@ -765,8 +768,12 @@ class AnalysisManager {
         }
         
         const filteredData = this.concatenatedData.filter(item => {
-            const matchesClient = !clientFilter || item.client === clientFilter;
-            const matchesEngin = !enginFilter || item.engin === enginFilter;
+            // Handle multiple clients in one entry
+            const matchesClient = !clientFilter || 
+                (item.client && item.client.includes(clientFilter));
+            
+            const matchesEngin = !enginFilter || 
+                (item.material_number === enginFilter);
             
             let matchesDate = true;
             if (dateFilter) {
@@ -796,9 +803,10 @@ class AnalysisManager {
 
     // Utility methods
     formatDateFromIso(isoString) {
-        if (!isoString) return '';
+        if (!isoString) return 'Non défini';
         try {
-            return new Date(isoString).toLocaleDateString('fr-FR');
+            const date = new Date(isoString);
+            return date.toLocaleDateString('fr-FR') + ' ' + date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
         } catch (e) {
             return isoString;
         }
@@ -818,22 +826,36 @@ class AnalysisManager {
                 const [datePart, timePart] = dateStr.split('_');
                 
                 // Format: YYYYMMDD to DD/MM/YYYY
-                const year = datePart.substring(0, 4);
-                const month = datePart.substring(4, 6);
-                const day = datePart.substring(6, 8);
-                
-                // Format time if available
-                let timeFormatted = '';
-                if (timePart && timePart.length >= 4) {
-                    const hour = timePart.substring(0, 2);
-                    const minute = timePart.substring(2, 4);
-                    timeFormatted = ` ${hour}:${minute}`;
+                if (datePart.length === 8) {
+                    const year = datePart.substring(0, 4);
+                    const month = datePart.substring(4, 6);
+                    const day = datePart.substring(6, 8);
+                    
+                    // Format time if available
+                    let timeFormatted = '';
+                    if (timePart && timePart.length >= 4) {
+                        const hour = timePart.substring(0, 2);
+                        const minute = timePart.substring(2, 4);
+                        timeFormatted = ` ${hour}:${minute}`;
+                    }
+                    
+                    return `${day}/${month}/${year}${timeFormatted}`;
                 }
-                
-                return `${day}/${month}/${year}${timeFormatted}`;
             }
             
-            return this.formatDateFromIso(dateStr);
+            // Handle ISO format dates
+            if (dateStr.includes('T')) {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('fr-FR') + ' ' + date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
+            }
+            
+            // Try to parse as regular date
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime())) {
+                return date.toLocaleDateString('fr-FR') + ' ' + date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
+            }
+            
+            return dateStr;
         } catch (e) {
             return dateStr;
         }

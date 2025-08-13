@@ -1,5 +1,12 @@
 # Excel Comparison Tool - Changelog
 
+## Version 1.2.1
+
+### Bug Fixes
+- Fixed date issues (human readable)
+- Fixed locomotive number instead of series
+- Fixed report analysis generation
+
 ## Version 1.2.0
 
 ### New features
