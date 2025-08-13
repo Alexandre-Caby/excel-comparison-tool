@@ -533,47 +533,191 @@ class AnalysisEngine:
         return result
     
     def create_concatenated_data(self, df, site):
-        """Create concatenated RDV data with consistent hour calculation"""
-        concatenated_data = []
+        """Create concatenated RDV data grouped by locomotive and date range"""
+        
         date_col = 'DateTime de Début' if 'DateTime de Début' in df.columns else 'Date de Début'
         end_date_col = 'DateTime de Fin' if 'DateTime de Fin' in df.columns else 'Date de Fin'
         
+        # Group by locomotive and overlapping date ranges
+        locomotive_groups = defaultdict(list)
+        
         for index, row in df.iterrows():
             client = str(row.get('STF', '')).strip()
-            engin = str(row.get('SERIE', '') or row.get('N° Matériel Roulant', '')).strip()
+            # Use material number (column C) instead of series
+            material_number = str(row.get('N° Matériel Roulant', '')).strip()
             
+            if not material_number:
+                continue
+                
             start_date = row.get(date_col)
             end_date = row.get(end_date_col)
-            
-            date_debut = start_date.strftime('%Y%m%d_%H%M') if pd.notna(start_date) else 'NODATE'
-            date_fin = end_date.strftime('%Y%m%d_%H%M') if pd.notna(end_date) else 'NODATE'
-            
             operation = str(row.get('Code Opération', '')).strip()
-            concatenated_string = f"{site}_{client}_{engin}_{date_debut}_{date_fin}_{operation}"
-            concatenated_string = re.sub(r'_{2,}', '_', concatenated_string).strip('_')
+            libelle = str(row.get('Libellé Intervention', '')).strip()
             
-            # Calculate days using consistent method
-            days = self.calculate_days_in_period(start_date, end_date)
-            
-            # Calculate hours consistently as days * 24
-            hours = days * 24
-            
-            concatenated_data.append({
+            locomotive_groups[material_number].append({
                 'index': index + 1,
-                'site': site,
                 'client': client,
-                'engin': engin,
-                'date_debut': date_debut,
-                'date_fin': date_fin,
+                'material_number': material_number,
+                'start_date': start_date,
+                'end_date': end_date,
                 'operation': operation,
-                'libelle': str(row.get('Libellé Intervention', '')).strip(),
-                'concatenated': concatenated_string,
-                'duration_days': days,
-                'duration_hours': hours  # Consistent conversion: days * 24
+                'libelle': libelle,
+                'original_row': row
             })
         
+        concatenated_data = []
+        grouped_index = 1
+        
+        for material_number, operations in locomotive_groups.items():
+            # Sort operations by start date
+            operations.sort(key=lambda x: x['start_date'] if pd.notna(x['start_date']) else pd.Timestamp.min)
+            
+            # Group overlapping or consecutive operations
+            grouped_operations = self._group_overlapping_operations(operations)
+            
+            for group in grouped_operations:
+                # Find the earliest start date and latest end date in the group
+                valid_start_dates = [op['start_date'] for op in group if pd.notna(op['start_date'])]
+                valid_end_dates = [op['end_date'] for op in group if pd.notna(op['end_date'])]
+                
+                if valid_start_dates and valid_end_dates:
+                    earliest_start = min(valid_start_dates)
+                    latest_end = max(valid_end_dates)
+                elif valid_start_dates:
+                    earliest_start = min(valid_start_dates)
+                    latest_end = earliest_start  # Same day if no end date
+                elif valid_end_dates:
+                    latest_end = max(valid_end_dates)
+                    earliest_start = latest_end  # Same day if no start date
+                else:
+                    earliest_start = None
+                    latest_end = None
+                
+                # Collect all operations and clients for this group
+                all_operations = []
+                all_clients = set()
+                
+                for op in group:
+                    if op['operation']:
+                        all_operations.append(op['operation'])
+                    if op['client']:
+                        all_clients.add(op['client'])
+                
+                # Create concatenated string with technical format for internal use
+                date_debut_tech = earliest_start.strftime('%Y%m%d_%H%M') if pd.notna(earliest_start) else 'NODATE'
+                date_fin_tech = latest_end.strftime('%Y%m%d_%H%M') if pd.notna(latest_end) else 'NODATE'
+                
+                # Create human-readable dates for display
+                date_debut_display = self.format_date_for_display(earliest_start)
+                date_fin_display = self.format_date_for_display(latest_end)
+                
+                operations_summary = ', '.join(set(all_operations)) if all_operations else 'N/A'
+                client_summary = ', '.join(sorted(all_clients)) if all_clients else 'N/A'
+                
+                concatenated_string = f"{site}_{client_summary}_{material_number}_{date_debut_tech}_{date_fin_tech}_{operations_summary}"
+                concatenated_string = re.sub(r'_{2,}', '_', concatenated_string).strip('_')
+                
+                # Calculate days using consistent method
+                days = self.calculate_days_in_period(earliest_start, latest_end)
+                hours = days * 24
+                
+                concatenated_data.append({
+                    'index': grouped_index,
+                    'site': site,
+                    'client': client_summary,
+                    'material_number': material_number,
+                    'engin': material_number,  # Keep for backward compatibility
+                    'date_debut': date_debut_tech,  # Technical format for processing
+                    'date_fin': date_fin_tech,      # Technical format for processing
+                    'date_debut_display': date_debut_display,  # Human-readable format
+                    'date_fin_display': date_fin_display,      # Human-readable format
+                    'operation': operations_summary[:50] + '...' if len(operations_summary) > 50 else operations_summary,
+                    'operations_summary': operations_summary,  # Full list
+                    'libelle': '; '.join([op['libelle'] for op in group if op['libelle']])[:100],
+                    'concatenated': concatenated_string,
+                    'duration_days': days,
+                    'duration_hours': hours,
+                    'operations_count': len(group),
+                    # Store actual datetime objects for Excel formatting
+                    'start_datetime': earliest_start if pd.notna(earliest_start) else None,
+                    'end_datetime': latest_end if pd.notna(latest_end) else None,
+                    'rdv_details': [
+                        {
+                            'operation': op['operation'],
+                            'libelle': op['libelle'],
+                            'start': op['start_date'].isoformat() if pd.notna(op['start_date']) else None,
+                            'end': op['end_date'].isoformat() if pd.notna(op['end_date']) else None,
+                            'start_display': self.format_date_for_display(op['start_date']),
+                            'end_display': self.format_date_for_display(op['end_date'])
+                        } for op in group
+                    ]
+                })
+                
+                grouped_index += 1
+        
         return concatenated_data
+    def _group_overlapping_operations(self, operations):
+        """Group operations that overlap or are consecutive for the same locomotive"""
+        if not operations:
+            return []
+        
+        # Sort by start date
+        operations.sort(key=lambda x: x['start_date'] if pd.notna(x['start_date']) else pd.Timestamp.min)
+        
+        groups = []
+        current_group = [operations[0]]
+        
+        for i in range(1, len(operations)):
+            current_op = operations[i]
+            last_op_in_group = current_group[-1]
+            
+            # Check if operations overlap or are consecutive
+            if self._operations_should_be_grouped(last_op_in_group, current_op):
+                current_group.append(current_op)
+            else:
+                # Start a new group
+                groups.append(current_group)
+                current_group = [current_op]
+        
+        # Add the last group
+        groups.append(current_group)
+        
+        return groups
 
+    def _operations_should_be_grouped(self, op1, op2):
+        """Determine if two operations should be grouped together"""
+        # If either operation has missing dates, group them conservatively
+        if (pd.isna(op1['start_date']) or pd.isna(op1['end_date']) or 
+            pd.isna(op2['start_date']) or pd.isna(op2['end_date'])):
+            return True
+        
+        # Check for overlap or if they're within 1 day of each other
+        op1_end = op1['end_date'].date()
+        op2_start = op2['start_date'].date()
+        
+        # Group if there's overlap or if they're consecutive/very close
+        days_gap = (op2_start - op1_end).days
+        
+        # Group if:
+        # 1. There's overlap (gap <= 0)
+        # 2. They're consecutive or within 1 day (gap <= 1)
+        return days_gap <= 1
+    
+    def format_date_for_display(self, date_val):
+        """Format date for human-readable display in French format"""
+        if pd.isna(date_val) or date_val is None:
+            return 'Non défini'
+        
+        try:
+            # Ensure we have a datetime object
+            if isinstance(date_val, str):
+                date_val = pd.to_datetime(date_val)
+            
+            # Format as DD/MM/YYYY HH:MM
+            return date_val.strftime('%d/%m/%Y %H:%M')
+        except:
+            return 'Date invalide'
+        
     def detect_conflicts(self, df, site):
         """Detect conflicts including date format issues and missing dates"""
         conflicts = []

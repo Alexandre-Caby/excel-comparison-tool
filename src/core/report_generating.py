@@ -1126,16 +1126,14 @@ class ReportGenerator:
                         pass
         return None
 
-    # ===== NEW ANALYSIS EXPORT METHODS ==============================================
-    
     @staticmethod
     def _create_analysis_excel_export(results, export_options, temp_dir):
-        """Create Excel export for analysis results"""
+        """Create Excel export for analysis results with proper date formatting"""
         temp_fd, temp_path = tempfile.mkstemp(suffix='.xlsx', dir=temp_dir)
         os.close(temp_fd)
         
         try:
-            with xlsxwriter.Workbook(temp_path) as workbook:
+            with xlsxwriter.Workbook(temp_path, {'default_date_format': 'dd/mm/yyyy hh:mm'}) as workbook:
                 # Define formats
                 title_format = workbook.add_format({
                     'bold': True, 'font_size': 16, 'align': 'center',
@@ -1148,26 +1146,30 @@ class ReportGenerator:
                 
                 data_format = workbook.add_format({'border': 1})
                 
-                # Create summary sheet if requested
+                # Add date format
+                date_format = workbook.add_format({
+                    'num_format': 'dd/mm/yyyy hh:mm',
+                    'align': 'left',
+                    'valign': 'vcenter',
+                    'border': 1
+                })
+                
+                # Create each sheet
                 if export_options.get('summary', True):
                     ReportGenerator._create_analysis_summary_sheet(workbook, results, title_format, header_format, data_format)
                 
-                # Create weekly planning sheet if requested and data exists
                 if export_options.get('weekly_planning', True) and results.get('weekly_planning'):
                     ReportGenerator._create_weekly_planning_sheet(workbook, results['weekly_planning'], header_format, data_format)
-                
-                # Create equipment analysis sheet if requested and data exists
+
                 if export_options.get('equipment_analysis', True) and results.get('equipment_analysis'):
-                    ReportGenerator._create_equipment_analysis_sheet(workbook, results['equipment_analysis'], header_format, data_format)
-                
-                # Create concatenated data sheet if requested
+                    ReportGenerator._create_equipment_analysis_sheet(workbook, results['equipment_analysis'], header_format, data_format, date_format)
+
                 if export_options.get('concatenated', True) and results.get('concatenated_data'):
-                    ReportGenerator._create_concatenated_data_sheet(workbook, results['concatenated_data'], header_format, data_format)
-                
-                # Create conflicts sheet if requested
+                    ReportGenerator._create_concatenated_data_sheet(workbook, results['concatenated_data'], header_format, data_format, date_format)
+
                 if export_options.get('conflicts', True) and results.get('conflicts'):
-                    ReportGenerator._create_conflicts_sheet(workbook, results['conflicts'], header_format, data_format)
-            
+                    ReportGenerator._create_conflicts_sheet(workbook, results['conflicts'], header_format, data_format, date_format)
+
             return temp_path
             
         except Exception as e:
@@ -1232,16 +1234,24 @@ class ReportGenerator:
             ws.set_column(col_idx, col_idx, 15)
     
     @staticmethod
-    def _create_equipment_analysis_sheet(workbook, equipment_data, header_format, data_format):
-        """Create equipment analysis sheet"""
+    def _create_equipment_analysis_sheet(workbook, equipment_data, header_format, data_format, date_format):
+        """Create equipment analysis sheet with proper date formatting"""
         ws = workbook.add_worksheet('🚂 Analyse Équipements')
         
         # Headers
-        headers = ['Site', 'Équipement', 'RDV', 'Jours d\'immobilisation', 'Heures d\'immobilisation', 'Durée moy. (j)', 'Opérations', 'Clients']
+        headers = ['Site', 'Équipement', 'RDV', 'Jours d\'immobilisation', 'Heures d\'immobilisation', 
+                'Durée moy. (j)', 'Opérations', 'Clients', 'Premier RDV', 'Dernier RDV']
+        
+        # Set column widths
+        column_widths = [15, 20, 12, 22, 22, 15, 15, 15, 20, 20]
+        for col_idx, width in enumerate(column_widths):
+            ws.set_column(col_idx, col_idx, width)
+        
+        # Write headers
         for col_idx, header in enumerate(headers):
             ws.write(0, col_idx, header, header_format)
         
-        # Data
+        # Write data
         for row_idx, (key, data) in enumerate(equipment_data.items(), start=1):
             ws.write(row_idx, 0, data.get('site', ''), data_format)
             ws.write(row_idx, 1, data.get('equipment', ''), data_format)
@@ -1251,152 +1261,212 @@ class ReportGenerator:
             ws.write(row_idx, 5, data.get('average_duration_days', 0), data_format)
             ws.write(row_idx, 6, data.get('operations_count', 0), data_format)
             ws.write(row_idx, 7, data.get('clients_count', 0), data_format)
-        
-        # Set column widths
-        for col_idx in range(len(headers)):
-            ws.set_column(col_idx, col_idx, 20)
+            
+            # Format first and last RDV dates
+            first_rdv = data.get('first_rdv')
+            last_rdv = data.get('last_rdv')
+            
+            if first_rdv:
+                try:
+                    first_dt = pd.to_datetime(first_rdv)
+                    ws.write_datetime(row_idx, 8, first_dt.to_pydatetime(), date_format)
+                except:
+                    ws.write(row_idx, 8, first_rdv, data_format)
+            else:
+                ws.write(row_idx, 8, 'N/A', data_format)
+            
+            if last_rdv:
+                try:
+                    last_dt = pd.to_datetime(last_rdv)
+                    ws.write_datetime(row_idx, 9, last_dt.to_pydatetime(), date_format)
+                except:
+                    ws.write(row_idx, 9, last_rdv, data_format)
+            else:
+                ws.write(row_idx, 9, 'N/A', data_format)
     
     @staticmethod
-    def _create_concatenated_data_sheet(workbook, concatenated_data, header_format, data_format):
-        """Create concatenated data sheet"""
+    def _create_concatenated_data_sheet(workbook, concatenated_data, header_format, data_format, date_format):
+        """Create concatenated data sheet with proper date formatting"""
         ws = workbook.add_worksheet('🔗 Données Concaténées')
         
-        if not concatenated_data:
-            ws.write(0, 0, 'Aucune donnée concaténée disponible')
-            return
-        
         # Headers
-        headers = ['Index', 'Site', 'Client', 'Engin', 'Date Début', 'Date Fin', 'Opération', 'Chaîne Concaténée', 'Durée (j)', 'Durée (h)']
+        headers = ['Index', 'Site', 'Numéro Engin', 'Date Début', 'Date Fin', 
+                'Client', 'Opérations', 'Jours', 'Heures', 'Nb Opérations', 'Libellé']
+        
+        # Set column widths for better readability
+        column_widths = [8, 15, 20, 20, 20, 20, 30, 10, 10, 12, 40]
+        for col_idx, width in enumerate(column_widths):
+            ws.set_column(col_idx, col_idx, width)
+        
+        # Write headers
         for col_idx, header in enumerate(headers):
             ws.write(0, col_idx, header, header_format)
         
-        # Data (limit to first 1000 rows)
-        for row_idx, item in enumerate(concatenated_data[:1000], start=1):
+        # Write data
+        for row_idx, item in enumerate(concatenated_data, start=1):
             ws.write(row_idx, 0, item.get('index', ''), data_format)
             ws.write(row_idx, 1, item.get('site', ''), data_format)
-            ws.write(row_idx, 2, item.get('client', ''), data_format)
-            ws.write(row_idx, 3, item.get('engin', ''), data_format)
-            ws.write(row_idx, 4, item.get('date_debut', ''), data_format)
-            ws.write(row_idx, 5, item.get('date_fin', ''), data_format)
-            ws.write(row_idx, 6, item.get('operation', ''), data_format)
-            ws.write(row_idx, 7, item.get('concatenated', ''), data_format)
-            ws.write(row_idx, 8, item.get('duration_days', 0), data_format)
-            ws.write(row_idx, 9, item.get('duration_hours', 0), data_format)
-        
-        # Set column widths
-        column_widths = [8, 15, 20, 15, 20, 20, 20, 40, 10, 10]
-        for col_idx, width in enumerate(column_widths):
-            ws.set_column(col_idx, col_idx, width)
+            ws.write(row_idx, 2, item.get('material_number', ''), data_format)
+            
+            # Format dates properly using datetime objects when available
+            start_datetime = item.get('start_datetime')
+            end_datetime = item.get('end_datetime')
+            
+            if start_datetime and pd.notna(start_datetime):
+                # Write as proper Excel datetime with formatting
+                ws.write_datetime(row_idx, 3, start_datetime.to_pydatetime(), date_format)
+            else:
+                # Fall back to formatted display string
+                ws.write(row_idx, 3, item.get('date_debut_display', 'Non défini'), data_format)
+            
+            if end_datetime and pd.notna(end_datetime):
+                # Write as proper Excel datetime with formatting
+                ws.write_datetime(row_idx, 4, end_datetime.to_pydatetime(), date_format)
+            else:
+                # Fall back to formatted display string
+                ws.write(row_idx, 4, item.get('date_fin_display', 'Non défini'), data_format)
+            
+            ws.write(row_idx, 5, item.get('client', ''), data_format)
+            ws.write(row_idx, 6, item.get('operations_summary', ''), data_format)
+            ws.write(row_idx, 7, item.get('duration_days', 0), data_format)
+            ws.write(row_idx, 8, item.get('duration_hours', 0), data_format)
+            ws.write(row_idx, 9, item.get('operations_count', 0), data_format)
+            ws.write(row_idx, 10, item.get('libelle', ''), data_format)
     
     @staticmethod
-    def _create_conflicts_sheet(workbook, conflicts, header_format, data_format):
-        """Create conflicts sheet"""
+    def _create_conflicts_sheet(workbook, conflicts, header_format, data_format, date_format):
+        """Create conflicts sheet with proper date formatting"""
         ws = workbook.add_worksheet('⚠️ Conflits')
         
-        if not conflicts:
-            ws.write(0, 0, 'Aucun conflit détecté')
-            return
-        
         # Headers
-        headers = ['Type', 'Équipement', 'Opération', 'Libellé', 'Sévérité', 'Description', 'Occurrences']
+        headers = ['Sévérité', 'Type', 'Engin', 'Opération', 'Description', 
+                'Date Début', 'Date Fin', 'Durée (jours)', 'Occurrences']
+        
+        # Set column widths
+        column_widths = [12, 20, 20, 15, 40, 20, 20, 12, 12]
+        for col_idx, width in enumerate(column_widths):
+            ws.set_column(col_idx, col_idx, width)
+        
+        # Write headers
         for col_idx, header in enumerate(headers):
             ws.write(0, col_idx, header, header_format)
         
-        # Data
+        # Write data
         for row_idx, conflict in enumerate(conflicts, start=1):
-            ws.write(row_idx, 0, conflict.get('type', ''), data_format)
-            ws.write(row_idx, 1, conflict.get('equipment', ''), data_format)
-            ws.write(row_idx, 2, conflict.get('operation', ''), data_format)
-            ws.write(row_idx, 3, conflict.get('libelle', ''), data_format)
-            ws.write(row_idx, 4, conflict.get('severity', ''), data_format)
-            ws.write(row_idx, 5, conflict.get('description', ''), data_format)
-            ws.write(row_idx, 6, conflict.get('occurrence_count', 1), data_format)
-        
-        # Set column widths
-        column_widths = [20, 20, 15, 30, 10, 40, 10]
-        for col_idx, width in enumerate(column_widths):
-            ws.set_column(col_idx, col_idx, width)
-    
+            equipment = conflict.get('equipment', '').split('_')[-1] if conflict.get('equipment') else 'Non spécifié'
+            
+            severity = conflict.get('severity', '').upper()
+            conflict_type = ReportGenerator._get_conflict_type_label(conflict.get('type', ''))
+            
+            ws.write(row_idx, 0, severity, data_format)
+            ws.write(row_idx, 1, conflict_type, data_format)
+            ws.write(row_idx, 2, equipment, data_format)
+            ws.write(row_idx, 3, conflict.get('operation', ''), data_format)
+            ws.write(row_idx, 4, conflict.get('description', ''), data_format)
+            
+            # Format dates if available
+            rdv_info = conflict.get('rdv_info', {})
+            start_date = rdv_info.get('start') if rdv_info else None
+            end_date = rdv_info.get('end') if rdv_info else None
+            
+            if start_date:
+                try:
+                    start_dt = pd.to_datetime(start_date)
+                    ws.write_datetime(row_idx, 5, start_dt.to_pydatetime(), date_format)
+                except:
+                    ws.write(row_idx, 5, start_date, data_format)
+            else:
+                original_start = conflict.get('sample_original_dates', {}).get('start', 'N/A')
+                ws.write(row_idx, 5, original_start, data_format)
+            
+            if end_date:
+                try:
+                    end_dt = pd.to_datetime(end_date)
+                    ws.write_datetime(row_idx, 6, end_dt.to_pydatetime(), date_format)
+                except:
+                    ws.write(row_idx, 6, end_date, data_format)
+            else:
+                original_end = conflict.get('sample_original_dates', {}).get('end', 'N/A')
+                ws.write(row_idx, 6, original_end, data_format)
+            
+            ws.write(row_idx, 7, conflict.get('days', 0), data_format)
+            ws.write(row_idx, 8, conflict.get('occurrence_count', 1), data_format)
+
     @staticmethod
     def _create_analysis_csv_export(results, export_options, temp_dir):
-        """Create CSV export for analysis results"""
+        """Create CSV export for analysis results with proper date formatting"""
         temp_fd, temp_path = tempfile.mkstemp(suffix='.csv', dir=temp_dir)
         
         try:
             with os.fdopen(temp_fd, 'w', newline='', encoding='utf-8-sig') as temp_file:
                 writer = csv.writer(temp_file, delimiter=';')
                 
-                # Write summary section
-                if export_options.get('summary', True):
-                    writer.writerow(['=== RÉSUMÉ D\'ANALYSE ==='])
-                    summary = results.get('summary', {})
-                    writer.writerow(['Total RDV', summary.get('total_rdv', 0)])
-                    writer.writerow(['Total Clients', summary.get('total_clients', 0)])
-                    writer.writerow(['Total Équipements', summary.get('total_equipment', 0)])
-                    writer.writerow(['Durée moyenne RDV (heures)', summary.get('average_rdv_duration_hours', 0)])
-                    writer.writerow(['Total jours d\'immobilisation', summary.get('total_days_with_rdv', 0)])
-                    writer.writerow(['Conflits détectés', summary.get('conflict_count', 0)])
-                    writer.writerow([''])
-                
-                # Write weekly planning if requested
-                if export_options.get('weekly_planning', True) and results.get('weekly_planning'):
-                    writer.writerow(['=== PLANNING HEBDOMADAIRE ==='])
-                    writer.writerow(['Semaine', 'RDV', 'Clients', 'Engins', 'Durée Moy. RDV (h)', 'Jours d\'immobilisation'])
-                    
-                    for week, data in results['weekly_planning'].items():
-                        writer.writerow([
-                            week,
-                            data.get('rdv_count', 0),
-                            data.get('client_count', 0),
-                            data.get('equipment_count', 0),
-                            data.get('avg_rdv_duration_hours', 0),
-                            data.get('immobilization_days', 0)
-                        ])
-                    writer.writerow([''])
-                
-                # Write concatenated data if requested (limited to first 100 rows)
+                # Write concatenated data if requested
                 if export_options.get('concatenated', True) and results.get('concatenated_data'):
-                    writer.writerow(['=== DONNÉES CONCATÉNÉES (100 premières) ==='])
-                    writer.writerow(['Index', 'Site', 'Client', 'Engin', 'Date Début', 'Date Fin', 'Opération', 'Chaîne Concaténée', 'Durée (j)', 'Durée (h)'])
+                    writer.writerow(['=== DONNÉES CONCATÉNÉES ==='])
+                    writer.writerow(['Index', 'Site', 'Numéro Engin', 'Date Début', 'Date Fin', 'Client', 
+                                    'Opérations', 'Jours', 'Heures', 'Nb Opérations', 'Libellé'])
                     
-                    for item in results['concatenated_data'][:100]:
+                    for item in results['concatenated_data']:
+                        # Use formatted display dates if available
+                        date_debut = item.get('date_debut_display', item.get('date_debut', 'Non défini'))
+                        date_fin = item.get('date_fin_display', item.get('date_fin', 'Non défini'))
+                        
                         writer.writerow([
                             item.get('index', ''),
                             item.get('site', ''),
+                            item.get('material_number', ''),
+                            date_debut,
+                            date_fin,
                             item.get('client', ''),
-                            item.get('engin', ''),
-                            item.get('date_debut', ''),
-                            item.get('date_fin', ''),
-                            item.get('operation', ''),
-                            item.get('concatenated', ''),
+                            item.get('operations_summary', ''),
                             item.get('duration_days', 0),
-                            item.get('duration_hours', 0)
+                            item.get('duration_hours', 0),
+                            item.get('operations_count', 0),
+                            item.get('libelle', '')
                         ])
+                    
                     writer.writerow([''])
                 
                 # Write conflicts if requested
                 if export_options.get('conflicts', True) and results.get('conflicts'):
                     writer.writerow(['=== CONFLITS DÉTECTÉS ==='])
-                    writer.writerow(['Type', 'Équipement', 'Opération', 'Libellé', 'Sévérité', 'Description', 'Occurrences'])
+                    writer.writerow(['Sévérité', 'Type', 'Engin', 'Opération', 'Description', 
+                                    'Date Début', 'Date Fin', 'Durée (jours)', 'Occurrences'])
                     
                     for conflict in results['conflicts']:
+                        equipment = conflict.get('equipment', '').split('_')[-1] if conflict.get('equipment') else 'Non spécifié'
+                        
+                        # Get formatted dates
+                        rdv_info = conflict.get('rdv_info', {})
+                        if rdv_info and rdv_info.get('start'):
+                            start_date = pd.to_datetime(rdv_info.get('start')).strftime('%d/%m/%Y %H:%M') if pd.notna(pd.to_datetime(rdv_info.get('start'), errors='coerce')) else 'N/A'
+                        else:
+                            start_date = conflict.get('sample_original_dates', {}).get('start', 'N/A')
+                            
+                        if rdv_info and rdv_info.get('end'):
+                            end_date = pd.to_datetime(rdv_info.get('end')).strftime('%d/%m/%Y %H:%M') if pd.notna(pd.to_datetime(rdv_info.get('end'), errors='coerce')) else 'N/A'
+                        else:
+                            end_date = conflict.get('sample_original_dates', {}).get('end', 'N/A')
+                        
                         writer.writerow([
-                            conflict.get('type', ''),
-                            conflict.get('equipment', ''),
+                            conflict.get('severity', '').upper(),
+                            ReportGenerator._get_conflict_type_label(conflict.get('type', '')),
+                            equipment,
                             conflict.get('operation', ''),
-                            conflict.get('libelle', ''),
-                            conflict.get('severity', ''),
                             conflict.get('description', ''),
+                            start_date,
+                            end_date,
+                            conflict.get('days', 0),
                             conflict.get('occurrence_count', 1)
                         ])
-
+            
             return temp_path
             
         except Exception as e:
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
             raise e
-    
     @staticmethod
     def _create_analysis_pdf_export(results, export_options, temp_dir):
         """Create PDF export for analysis results"""
@@ -1479,3 +1549,14 @@ class ReportGenerator:
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
             raise e
+    
+    @staticmethod
+    def _get_conflict_type_label(conflict_type):
+        """Get human-readable label for conflict type"""
+        type_labels = {
+            'missing_start_date': 'Date début manquante',
+            'missing_end_date': 'Date fin manquante',
+            'date_inversion': 'Inversion de dates',
+            'excessive_immobilization': 'Immobilisation excessive'
+        }
+        return type_labels.get(conflict_type, conflict_type)
