@@ -1166,6 +1166,7 @@ class ReportGenerator:
 
                 if export_options.get('concatenated', True) and results.get('concatenated_data'):
                     ReportGenerator._create_concatenated_data_sheet(workbook, results['concatenated_data'], header_format, data_format, date_format)
+                    ReportGenerator._create_php_synthesis_sheet(workbook, results['concatenated_data'], header_format, data_format, date_format)
 
                 if export_options.get('conflicts', True) and results.get('conflicts'):
                     ReportGenerator._create_conflicts_sheet(workbook, results['conflicts'], header_format, data_format, date_format)
@@ -1286,17 +1287,35 @@ class ReportGenerator:
     
     @staticmethod
     def _create_concatenated_data_sheet(workbook, concatenated_data, header_format, data_format, date_format):
-        """Create concatenated data sheet with proper date formatting"""
+        """Create concatenated data sheet with separate date and time columns"""
         ws = workbook.add_worksheet('🔗 Données Concaténées')
         
-        # Headers
-        headers = ['Index', 'Site', 'Numéro Engin', 'Date Début', 'Date Fin', 
-                'Client', 'Opérations', 'Jours', 'Heures', 'Nb Opérations', 'Libellé']
+        # Updated headers with separate date/time columns
+        headers = [
+            'Index', 'Site', 'Numéro Engin', 
+            'Date Début', 'Heure Début', 'Date Fin', 'Heure Fin',
+            'Client', 'Opérations', 'Jours', 'Heures', 'Nb Opérations', 'Libellé'
+        ]
         
         # Set column widths for better readability
-        column_widths = [8, 15, 20, 20, 20, 20, 30, 10, 10, 12, 40]
+        column_widths = [8, 15, 20, 15, 12, 15, 12, 20, 30, 10, 10, 12, 40]
         for col_idx, width in enumerate(column_widths):
             ws.set_column(col_idx, col_idx, width)
+        
+        # Create specialized formats for date and time
+        date_only_format = workbook.add_format({
+            'num_format': 'dd/mm/yyyy',
+            'align': 'center',
+            'valign': 'vcenter',
+            'border': 1
+        })
+        
+        time_only_format = workbook.add_format({
+            'num_format': 'hh:mm',
+            'align': 'center',
+            'valign': 'vcenter',
+            'border': 1
+        })
         
         # Write headers
         for col_idx, header in enumerate(headers):
@@ -1304,34 +1323,66 @@ class ReportGenerator:
         
         # Write data
         for row_idx, item in enumerate(concatenated_data, start=1):
-            ws.write(row_idx, 0, item.get('index', ''), data_format)
-            ws.write(row_idx, 1, item.get('site', ''), data_format)
-            ws.write(row_idx, 2, item.get('material_number', ''), data_format)
+            col_idx = 0
             
-            # Format dates properly using datetime objects when available
+            # Index
+            ws.write(row_idx, col_idx, item.get('index', ''), data_format)
+            col_idx += 1
+            
+            # Site
+            ws.write(row_idx, col_idx, item.get('site', ''), data_format)
+            col_idx += 1
+            
+            # Numéro Engin
+            ws.write(row_idx, col_idx, item.get('material_number', ''), data_format)
+            col_idx += 1
+            
+            # Date Début and Heure Début
             start_datetime = item.get('start_datetime')
-            end_datetime = item.get('end_datetime')
-            
             if start_datetime and pd.notna(start_datetime):
-                # Write as proper Excel datetime with formatting
-                ws.write_datetime(row_idx, 3, start_datetime.to_pydatetime(), date_format)
+                # Write date as Excel date
+                ws.write_datetime(row_idx, col_idx, start_datetime.to_pydatetime(), date_only_format)
+                ws.write_datetime(row_idx, col_idx + 1, start_datetime.to_pydatetime(), time_only_format)
             else:
-                # Fall back to formatted display string
-                ws.write(row_idx, 3, item.get('date_debut_display', 'Non défini'), data_format)
+                # Fall back to string values
+                ws.write(row_idx, col_idx, item.get('date_debut_date', 'Non défini'), data_format)
+                ws.write(row_idx, col_idx + 1, item.get('date_debut_time', 'Non défini'), data_format)
+            col_idx += 2
             
+            # Date Fin and Heure Fin
+            end_datetime = item.get('end_datetime')
             if end_datetime and pd.notna(end_datetime):
-                # Write as proper Excel datetime with formatting
-                ws.write_datetime(row_idx, 4, end_datetime.to_pydatetime(), date_format)
+                # Write date as Excel date
+                ws.write_datetime(row_idx, col_idx, end_datetime.to_pydatetime(), date_only_format)
+                ws.write_datetime(row_idx, col_idx + 1, end_datetime.to_pydatetime(), time_only_format)
             else:
-                # Fall back to formatted display string
-                ws.write(row_idx, 4, item.get('date_fin_display', 'Non défini'), data_format)
+                # Fall back to string values
+                ws.write(row_idx, col_idx, item.get('date_fin_date', 'Non défini'), data_format)
+                ws.write(row_idx, col_idx + 1, item.get('date_fin_time', 'Non défini'), data_format)
+            col_idx += 2
             
-            ws.write(row_idx, 5, item.get('client', ''), data_format)
-            ws.write(row_idx, 6, item.get('operations_summary', ''), data_format)
-            ws.write(row_idx, 7, item.get('duration_days', 0), data_format)
-            ws.write(row_idx, 8, item.get('duration_hours', 0), data_format)
-            ws.write(row_idx, 9, item.get('operations_count', 0), data_format)
-            ws.write(row_idx, 10, item.get('libelle', ''), data_format)
+            # Client
+            ws.write(row_idx, col_idx, item.get('client', ''), data_format)
+            col_idx += 1
+            
+            # Opérations
+            ws.write(row_idx, col_idx, item.get('operations_summary', ''), data_format)
+            col_idx += 1
+            
+            # Jours
+            ws.write(row_idx, col_idx, item.get('duration_days', 0), data_format)
+            col_idx += 1
+            
+            # Heures
+            ws.write(row_idx, col_idx, item.get('duration_hours', 0), data_format)
+            col_idx += 1
+            
+            # Nb Opérations
+            ws.write(row_idx, col_idx, item.get('operations_count', 0), data_format)
+            col_idx += 1
+            
+            # Libellé
+            ws.write(row_idx, col_idx, item.get('libelle', ''), data_format)
     
     @staticmethod
     def _create_conflicts_sheet(workbook, conflicts, header_format, data_format, date_format):
@@ -1391,6 +1442,62 @@ class ReportGenerator:
             
             ws.write(row_idx, 7, conflict.get('days', 0), data_format)
             ws.write(row_idx, 8, conflict.get('occurrence_count', 1), data_format)
+    
+    @staticmethod
+    def _create_php_synthesis_sheet(workbook, concatenated_data, header_format, data_format, date_format):
+        """Create PHP synthesis sheet with specific column order: Engin, Date fin, Heure fin, Site, Client"""
+        ws = workbook.add_worksheet('📋 Synthèse pour PHP')
+        
+        # Headers in the exact order requested
+        headers = ['Engin', 'Date fin', 'Heure fin', 'Site', 'Client']
+        
+        # Set column widths optimized for the PHP synthesis
+        column_widths = [25, 15, 12, 20, 25]
+        for col_idx, width in enumerate(column_widths):
+            ws.set_column(col_idx, col_idx, width)
+        
+        # Create specialized formats for date and time
+        date_only_format = workbook.add_format({
+            'num_format': 'dd/mm/yyyy',
+            'align': 'center',
+            'valign': 'vcenter',
+            'border': 1
+        })
+        
+        time_only_format = workbook.add_format({
+            'num_format': 'hh:mm',
+            'align': 'center',
+            'valign': 'vcenter',
+            'border': 1
+        })
+        
+        # Write headers
+        for col_idx, header in enumerate(headers):
+            ws.write(0, col_idx, header, header_format)
+        
+        # Write data
+        for row_idx, item in enumerate(concatenated_data, start=1):
+            # Column 0: Engin (material_number)
+            ws.write(row_idx, 0, item.get('material_number', ''), data_format)
+            
+            # Column 1: Date fin 
+            end_datetime = item.get('end_datetime')
+            if end_datetime and pd.notna(end_datetime):
+                ws.write_datetime(row_idx, 1, end_datetime.to_pydatetime(), date_only_format)
+            else:
+                ws.write(row_idx, 1, item.get('date_fin_date', 'Non défini'), data_format)
+            
+            # Column 2: Heure fin
+            if end_datetime and pd.notna(end_datetime):
+                ws.write_datetime(row_idx, 2, end_datetime.to_pydatetime(), time_only_format)
+            else:
+                ws.write(row_idx, 2, item.get('date_fin_time', 'Non défini'), data_format)
+            
+            # Column 3: Site
+            ws.write(row_idx, 3, item.get('site', ''), data_format)
+            
+            # Column 4: Client
+            ws.write(row_idx, 4, item.get('client', ''), data_format)
 
     @staticmethod
     def _create_analysis_csv_export(results, export_options, temp_dir):
@@ -1404,20 +1511,21 @@ class ReportGenerator:
                 # Write concatenated data if requested
                 if export_options.get('concatenated', True) and results.get('concatenated_data'):
                     writer.writerow(['=== DONNÉES CONCATÉNÉES ==='])
-                    writer.writerow(['Index', 'Site', 'Numéro Engin', 'Date Début', 'Date Fin', 'Client', 
-                                    'Opérations', 'Jours', 'Heures', 'Nb Opérations', 'Libellé'])
+                    writer.writerow([
+                        'Index', 'Site', 'Numéro Engin', 
+                        'Date Début', 'Heure Début', 'Date Fin', 'Heure Fin',
+                        'Client', 'Opérations', 'Jours', 'Heures', 'Nb Opérations', 'Libellé'
+                    ])
                     
                     for item in results['concatenated_data']:
-                        # Use formatted display dates if available
-                        date_debut = item.get('date_debut_display', item.get('date_debut', 'Non défini'))
-                        date_fin = item.get('date_fin_display', item.get('date_fin', 'Non défini'))
-                        
                         writer.writerow([
                             item.get('index', ''),
                             item.get('site', ''),
                             item.get('material_number', ''),
-                            date_debut,
-                            date_fin,
+                            item.get('date_debut_date', 'Non défini'),
+                            item.get('date_debut_time', 'Non défini'),
+                            item.get('date_fin_date', 'Non défini'),
+                            item.get('date_fin_time', 'Non défini'),
                             item.get('client', ''),
                             item.get('operations_summary', ''),
                             item.get('duration_days', 0),
@@ -1427,7 +1535,6 @@ class ReportGenerator:
                         ])
                     
                     writer.writerow([''])
-                
                 # Write conflicts if requested
                 if export_options.get('conflicts', True) and results.get('conflicts'):
                     writer.writerow(['=== CONFLITS DÉTECTÉS ==='])
