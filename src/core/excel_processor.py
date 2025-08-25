@@ -333,9 +333,9 @@ class ExcelProcessor:
         if df.empty:
             return df
 
-        # Select desired columns (A-J and N) based on position
-        if df.shape[1] >= 14:
-            desired_cols = list(range(0, 10)) + [13]  # Columns A-J (0-9) and N (13)
+        # Select desired columns (A-J and N and P) based on position
+        if df.shape[1] >= 16:
+            desired_cols = list(range(0, 10)) + [13, 15]  # Columns A-J (0-9), N (13), and P (15)
             df_copy = df.iloc[:, desired_cols].copy()
         else:
             df_copy = df.copy()
@@ -352,7 +352,8 @@ class ExcelProcessor:
             'Heure de Début': ['heure de début', 'heure de\ndébut'],
             'Date de Fin': ['date de fin'],
             'Heure de Fin': ['heure de fin', 'heure de\nfin'],
-            'N° Semaine Ou Reliquat': ['n° semaine', 'semaine ou reliquat']
+            'N° Semaine Ou Reliquat': ['n° semaine', 'semaine ou reliquat'],
+            'Acceptée': ['acceptée','acceptee']
         }
         
         # Standardize column names using exact matching first, then fuzzy matching

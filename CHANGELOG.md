@@ -1,5 +1,10 @@
 # Excel Comparison Tool - Changelog
 
+## Version 1.2.2
+
+### Fix
+- Improvement of the analysis php sheet in the export (only loc accepted)
+
 ## Version 1.2.1
 
 ### Bug Fixes

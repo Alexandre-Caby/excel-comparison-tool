@@ -23,7 +23,8 @@ class AnalysisEngine:
             'start_time': 'Heure de Début',
             'end_date': 'Date de Fin',
             'end_time': 'Heure de Fin',
-            'week_number': 'N° Semaine Ou Reliquat'
+            'week_number': 'N° Semaine Ou Reliquat',
+            'accepted': 'Acceptée'
         }
 
     def analyze_php_file(self, file_path, sheet_name, analysis_options=None):
@@ -553,7 +554,9 @@ class AnalysisEngine:
             end_date = row.get(end_date_col)
             operation = str(row.get('Code Opération', '')).strip()
             libelle = str(row.get('Libellé Intervention', '')).strip()
-            
+
+            acceptee_value = str(row.get('Acceptée', None))
+
             locomotive_groups[material_number].append({
                 'index': index + 1,
                 'client': client,
@@ -562,6 +565,7 @@ class AnalysisEngine:
                 'end_date': end_date,
                 'operation': operation,
                 'libelle': libelle,
+                'acceptee': acceptee_value,
                 'original_row': row
             })
         
@@ -596,13 +600,16 @@ class AnalysisEngine:
                 # Collect all operations and clients for this group
                 all_operations = []
                 all_clients = set()
+                all_acceptee_values = []
                 
                 for op in group:
                     if op['operation']:
                         all_operations.append(op['operation'])
                     if op['client']:
                         all_clients.add(op['client'])
-                
+                    if op['acceptee'] is not None:
+                        all_acceptee_values.append(op['acceptee'])
+
                 # Create concatenated string with technical format for internal use
                 date_debut_tech = earliest_start.strftime('%Y%m%d_%H%M') if pd.notna(earliest_start) else 'NODATE'
                 date_fin_tech = latest_end.strftime('%Y%m%d_%H%M') if pd.notna(latest_end) else 'NODATE'
@@ -648,7 +655,8 @@ class AnalysisEngine:
                             'start': op['start_date'].isoformat() if pd.notna(op['start_date']) else None,
                             'end': op['end_date'].isoformat() if pd.notna(op['end_date']) else None,
                             'start_display': self.format_date_for_display(op['start_date']),
-                            'end_display': self.format_date_for_display(op['end_date'])
+                            'end_display': self.format_date_for_display(op['end_date']),
+                            'acceptee': op['acceptee']
                         } for op in group
                     ]
                 })

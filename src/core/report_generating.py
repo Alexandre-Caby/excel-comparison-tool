@@ -1442,10 +1442,11 @@ class ReportGenerator:
             
             ws.write(row_idx, 7, conflict.get('days', 0), data_format)
             ws.write(row_idx, 8, conflict.get('occurrence_count', 1), data_format)
-    
+            
     @staticmethod
     def _create_php_synthesis_sheet(workbook, concatenated_data, header_format, data_format, date_format):
-        """Create PHP synthesis sheet with specific column order: Engin, Date fin, Heure fin, Site, Client"""
+        """Create PHP synthesis sheet with specific column order: Engin, Date fin, Heure fin, Site, Client
+        Only includes locomotives with accepted operations (Acceptée ≥ 2)"""
         ws = workbook.add_worksheet('📋 Synthèse pour PHP')
         
         # Headers in the exact order requested
@@ -1475,8 +1476,30 @@ class ReportGenerator:
         for col_idx, header in enumerate(headers):
             ws.write(0, col_idx, header, header_format)
         
-        # Write data
-        for row_idx, item in enumerate(concatenated_data, start=1):
+        # Filter concatenated data to only include accepted operations
+        filtered_data = []
+        for item in concatenated_data:
+            # Check if this locomotive has accepted operations
+            rdv_details = item.get('rdv_details', [])
+            has_accepted = False
+            
+            for rdv in rdv_details:
+                acceptee_value = rdv.get('acceptee')
+                if acceptee_value is not None:
+                    try:
+                        acceptee_int = int(float(acceptee_value))
+                        if acceptee_int >= 2:  # Accepted operations (≥ 2)
+                            has_accepted = True
+                            break
+                    except (ValueError, TypeError):
+                        continue
+            
+            # Only include locomotives with at least one accepted operation
+            if has_accepted:
+                filtered_data.append(item)
+        
+        # Write data - only for locomotives with accepted operations
+        for row_idx, item in enumerate(filtered_data, start=1):
             # Column 0: Engin (material_number)
             ws.write(row_idx, 0, item.get('material_number', ''), data_format)
             
@@ -1498,6 +1521,12 @@ class ReportGenerator:
             
             # Column 4: Client
             ws.write(row_idx, 4, item.get('client', ''), data_format)
+        
+        # Add a note at the bottom about filtering
+        if len(filtered_data) < len(concatenated_data):
+            note_row = len(filtered_data) + 2
+            ws.write(note_row, 0, f'Note: {len(concatenated_data) - len(filtered_data)} locomotives exclues (opérations non acceptées)', 
+                    workbook.add_format({'italic': True, 'font_color': 'gray'}))
 
     @staticmethod
     def _create_analysis_csv_export(results, export_options, temp_dir):
