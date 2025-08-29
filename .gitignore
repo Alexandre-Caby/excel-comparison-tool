@@ -9,3 +9,4 @@ src/utils/__pycache__/*
 *.bat
 *.exe
 .vscode/*
+*.ps1

@@ -18,7 +18,6 @@ class AnalysisEngine:
             'material_number': 'N° Matériel Roulant',
             'operation_code': 'Code Opération',
             'intervention_label': 'Libellé Intervention',
-            'intervention_deadline': 'Butée Intervention',
             'start_date': 'Date de Début',
             'start_time': 'Heure de Début',
             'end_date': 'Date de Fin',
@@ -101,8 +100,8 @@ class AnalysisEngine:
     def convert_date_columns(self, df):
         """Convert date columns with better handling of invalid dates"""
         try:
-            date_columns = ['Date de Début', 'Date de Fin', 'Butée Intervention']
-            
+            date_columns = ['Date de Début', 'Date de Fin']
+
             for col in date_columns:
                 if col in df.columns:
                     logger.info(f"Processing column {col}")
