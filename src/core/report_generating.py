@@ -1451,18 +1451,18 @@ class ReportGenerator:
     def _create_php_synthesis_sheet(workbook, concatenated_data, header_format, data_format, date_format, week_filter=None):
         """Create PHP synthesis sheet with specific column order: Engin, Date fin, Heure fin, Site, Client
         Only includes locomotives with accepted operations (Acceptée ≥ 2) and dates within correct week ranges
-        If week_filter is specified, only show that specific week"""
+        If week_filter is specified, only show that specific week. Also handles RELIQUAT entries."""
         ws = workbook.add_worksheet('📋 Synthèse pour PHP')
         
         # Headers in the exact order requested
         headers = ['Engin', 'Date fin', 'Heure fin', 'Site', 'Client', 'Semaine']
         
         # Set column widths optimized for the PHP synthesis
-        column_widths = [25, 15, 12, 20, 25, 10]
+        column_widths = [25, 15, 12, 20, 25, 12]
         for col_idx, width in enumerate(column_widths):
             ws.set_column(col_idx, col_idx, width)
         
-        # Use the passed date_format and create a time-only format based on it
+        # Create specialized formats
         time_only_format = workbook.add_format({
             'num_format': 'hh:mm',
             'align': 'center',
@@ -1470,7 +1470,6 @@ class ReportGenerator:
             'border': 1
         })
         
-        # Create a date-only format based on the passed date_format
         date_only_format = workbook.add_format({
             'num_format': 'dd/mm/yyyy',
             'align': 'center',
@@ -1491,7 +1490,32 @@ class ReportGenerator:
             
             return target_monday.date(), target_sunday.date()
         
-        # Filter concatenated data to only include accepted operations with correct week dates
+        def normalize_week_value(week_value):
+            """Normalize week value to handle both integers and RELIQUAT"""
+            if not week_value or pd.isna(week_value):
+                return None
+                
+            week_str = str(week_value).strip().upper()
+            
+            # Handle RELIQUAT case
+            if 'RELIQUAT' in week_str:
+                return 'RELIQUAT'
+            
+            # Try to extract numeric week
+            try:
+                # Extract numbers from the string (in case it's like "35.0" or "Week 35")
+                import re
+                numbers = re.findall(r'\d+', week_str)
+                if numbers:
+                    week_num = int(numbers[0])
+                    if 1 <= week_num <= 53:  # Valid week range
+                        return week_num
+            except:
+                pass
+            
+            return None
+        
+        # Filter concatenated data to only include accepted operations
         filtered_data = []
         current_year = 2025  # Adjust based on your data year
         
@@ -1499,6 +1523,7 @@ class ReportGenerator:
             # Check if this locomotive has accepted operations
             rdv_details = item.get('rdv_details', [])
             has_accepted = False
+            original_week_value = None
             
             for rdv in rdv_details:
                 acceptee_value = rdv.get('acceptee')
@@ -1507,6 +1532,13 @@ class ReportGenerator:
                         acceptee_int = int(float(str(acceptee_value)))
                         if acceptee_int >= 2:  # Accepted operations (≥ 2)
                             has_accepted = True
+                            
+                            # Also capture the original week value from the data
+                            if not original_week_value:
+                                # Try to get the week from the RDV details
+                                week_from_data = rdv.get('week_number') or rdv.get('N° Semaine Ou Reliquat')
+                                if week_from_data:
+                                    original_week_value = normalize_week_value(week_from_data)
                             break
                     except (ValueError, TypeError):
                         continue
@@ -1514,7 +1546,16 @@ class ReportGenerator:
             # Only include locomotives with at least one accepted operation
             if has_accepted:
                 end_datetime = item.get('end_datetime')
-                if end_datetime and pd.notna(end_datetime):
+                week_key = None
+                
+                # First, try to use the original week value from the data
+                if original_week_value == 'RELIQUAT':
+                    week_key = 'RELIQUAT'
+                elif isinstance(original_week_value, int):
+                    week_key = f"S{original_week_value:02d}"
+                
+                # If no original week value, calculate from end date
+                if not week_key and end_datetime and pd.notna(end_datetime):
                     try:
                         end_date = end_datetime.date()
                         end_year = end_datetime.year
@@ -1530,39 +1571,47 @@ class ReportGenerator:
                         # Check if the end date actually falls within this week's range
                         if week_start <= end_date <= week_end:
                             week_key = f"S{actual_week:02d}"
-                            
-                            # Apply week filter if specified
-                            if week_filter and week_filter != 'all':
-                                # Normalize week filter format
-                                if week_filter.upper().startswith('S'):
-                                    target_week = week_filter.upper()
-                                else:
-                                    target_week = f"S{int(week_filter):02d}"
-                                
-                                # Only include if it matches the selected week
-                                if week_key != target_week:
-                                    continue
-                            
-                            # The date is in the correct week range (and matches filter if specified)
-                            item_with_week = item.copy()
-                            item_with_week['actual_week'] = week_key
-                            item_with_week['week_start'] = week_start
-                            item_with_week['week_end'] = week_end
-                            item_with_week['iso_year'] = actual_year
-                            filtered_data.append(item_with_week)
-                            
+                        
                     except Exception as e:
                         print(f"Error processing date for {item.get('material_number', 'Unknown')}: {e}")
-                        # If we can't calculate the week, skip this item
                         continue
-                else:
-                    # No valid end date, skip this item
-                    continue
+                
+                # Apply week filter if specified
+                if week_filter and week_filter != 'all':
+                    # Normalize week filter format
+                    if week_filter.upper() == 'RELIQUAT':
+                        target_week = 'RELIQUAT'
+                    elif week_filter.upper().startswith('S'):
+                        target_week = week_filter.upper()
+                    else:
+                        try:
+                            target_week = f"S{int(week_filter):02d}"
+                        except:
+                            target_week = week_filter.upper()
+                    
+                    # Only include if it matches the selected week
+                    if week_key != target_week:
+                        continue
+                
+                # Include this item if we have a valid week_key or if no filtering is applied
+                if week_key or (not week_filter or week_filter == 'all'):
+                    item_with_week = item.copy()
+                    item_with_week['actual_week'] = week_key or 'S??'
+                    item_with_week['original_week_value'] = original_week_value
+                    filtered_data.append(item_with_week)
         
         # Sort by week number, then by end date
         def sort_key(item):
             week = item.get('actual_week', 'S99')
-            week_num = int(week[1:]) if week.startswith('S') and week[1:].isdigit() else 999
+            
+            # Handle RELIQUAT
+            if week == 'RELIQUAT':
+                week_num = 999
+            elif week.startswith('S') and week[1:].isdigit():
+                week_num = int(week[1:])
+            else:
+                week_num = 998  # Unknown weeks before RELIQUAT
+            
             end_datetime = item.get('end_datetime')
             if end_datetime and pd.notna(end_datetime):
                 return (week_num, end_datetime)
@@ -1604,7 +1653,7 @@ class ReportGenerator:
             # Column 4: Client
             ws.write(row_idx, 4, item.get('client', ''), data_format)
             
-            # Column 5: Semaine
+            # Column 5: Semaine (original week value or calculated)
             ws.write(row_idx, 5, item.get('actual_week', 'S??'), data_format)
         
         # Add notes
@@ -1613,33 +1662,41 @@ class ReportGenerator:
         
         # Update note to reflect week filtering
         if week_filter and week_filter != 'all':
-            target_week = week_filter.upper() if week_filter.upper().startswith('S') else f"S{int(week_filter):02d}"
-            ws.write(note_row, 0, f'Note: Filtré pour la semaine {target_week} uniquement - {len(filtered_data)} locomotives affichées', 
+            if week_filter.upper() == 'RELIQUAT':
+                filter_display = 'RELIQUAT'
+            elif week_filter.upper().startswith('S'):
+                filter_display = week_filter.upper()
+            else:
+                try:
+                    filter_display = f"S{int(week_filter):02d}"
+                except:
+                    filter_display = week_filter
+            
+            ws.write(note_row, 0, f'Note: Filtré pour {filter_display} uniquement - {len(filtered_data)} locomotives affichées', 
                     workbook.add_format({'italic': True, 'font_color': 'blue'}))
         else:
-            ws.write(note_row, 0, f'Note: {excluded_count} locomotives exclues (opérations non acceptées ou dates hors plage)', 
+            ws.write(note_row, 0, f'Note: {excluded_count} locomotives exclues (opérations non acceptées)', 
                     workbook.add_format({'italic': True, 'font_color': 'gray'}))
         
         # Add explanation about week calculation
         note_row += 1
-        ws.write(note_row, 0, 'Les semaines sont calculées selon la norme ISO (lundi = début de semaine)', 
-                workbook.add_format({'italic': True, 'font_color': 'blue'}))
-        
-        note_row += 1
-        ws.write(note_row, 0, 'Seules les dates tombant dans la plage réelle de la semaine sont incluses', 
+        ws.write(note_row, 0, 'Les semaines incluent les numéros ISO et les entrées RELIQUAT', 
                 workbook.add_format({'italic': True, 'font_color': 'blue'}))
         
         # Add week summary
         if week_counts:
             note_row += 2
             if week_filter and week_filter != 'all':
-                ws.write(note_row, 0, f'Semaine sélectionnée: {week_filter}', 
+                ws.write(note_row, 0, f'Sélection: {week_filter}', 
                         workbook.add_format({'bold': True}))
             else:
                 ws.write(note_row, 0, 'Résumé par semaine:', 
                         workbook.add_format({'bold': True}))
             
-            for week, count in sorted(week_counts.items()):
+            # Sort week counts to show numeric weeks first, then RELIQUAT
+            sorted_weeks = sorted(week_counts.items(), key=lambda x: (999 if x[0] == 'RELIQUAT' else int(x[0][1:]) if x[0].startswith('S') and x[0][1:].isdigit() else 998))
+            
+            for week, count in sorted_weeks:
                 note_row += 1
                 ws.write(note_row, 0, f'{week}: {count} locomotives', data_format)
     
@@ -1718,6 +1775,7 @@ class ReportGenerator:
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
             raise e
+        
     @staticmethod
     def _create_analysis_pdf_export(results, export_options, temp_dir):
         """Create PDF export for analysis results"""

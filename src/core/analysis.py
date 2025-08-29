@@ -543,7 +543,6 @@ class AnalysisEngine:
         
         for index, row in df.iterrows():
             client = str(row.get('STF', '')).strip()
-            # Use material number (column C) instead of series
             material_number = str(row.get('N° Matériel Roulant', '')).strip()
             
             if not material_number:
@@ -553,8 +552,23 @@ class AnalysisEngine:
             end_date = row.get(end_date_col)
             operation = str(row.get('Code Opération', '')).strip()
             libelle = str(row.get('Libellé Intervention', '')).strip()
-
-            acceptee_value = str(row.get('Acceptée', None))
+            acceptee_value = str(row.get('Acceptée', ''))
+            
+            # IMPORTANT: Preserve the week information from the original data
+            week_number_raw = row.get('N° Semaine Ou Reliquat', '')
+            week_number = None
+            
+            if pd.notna(week_number_raw) and str(week_number_raw).strip():
+                week_str = str(week_number_raw).strip().upper()
+                if 'RELIQUAT' in week_str:
+                    week_number = 'RELIQUAT'
+                else:
+                    try:
+                        week_num = int(week_str)
+                        if 1 <= week_num <= 53:
+                            week_number = week_num
+                    except:
+                        pass
 
             locomotive_groups[material_number].append({
                 'index': index + 1,
@@ -565,6 +579,7 @@ class AnalysisEngine:
                 'operation': operation,
                 'libelle': libelle,
                 'acceptee': acceptee_value,
+                'week_number': week_number,  # Add this
                 'original_row': row
             })
         
@@ -588,18 +603,19 @@ class AnalysisEngine:
                     latest_end = max(valid_end_dates)
                 elif valid_start_dates:
                     earliest_start = min(valid_start_dates)
-                    latest_end = earliest_start  # Same day if no end date
+                    latest_end = earliest_start
                 elif valid_end_dates:
                     latest_end = max(valid_end_dates)
-                    earliest_start = latest_end  # Same day if no start date
+                    earliest_start = latest_end
                 else:
                     earliest_start = None
                     latest_end = None
                 
-                # Collect all operations and clients for this group
+                # Collect all operations, clients, and week information
                 all_operations = []
                 all_clients = set()
                 all_acceptee_values = []
+                group_week_numbers = []
                 
                 for op in group:
                     if op['operation']:
@@ -608,12 +624,25 @@ class AnalysisEngine:
                         all_clients.add(op['client'])
                     if op['acceptee'] is not None:
                         all_acceptee_values.append(op['acceptee'])
+                    if op['week_number'] is not None:
+                        group_week_numbers.append(op['week_number'])
 
-                # Create concatenated string with technical format for internal use
+                # Determine the week for this group
+                group_week = None
+                if group_week_numbers:
+                    # If we have RELIQUAT in the group, use that
+                    if 'RELIQUAT' in group_week_numbers:
+                        group_week = 'RELIQUAT'
+                    else:
+                        # Use the most common week number
+                        from collections import Counter
+                        week_counts = Counter(group_week_numbers)
+                        group_week = week_counts.most_common(1)[0][0]
+
+                # Create technical and display formats
                 date_debut_tech = earliest_start.strftime('%Y%m%d_%H%M') if pd.notna(earliest_start) else 'NODATE'
                 date_fin_tech = latest_end.strftime('%Y%m%d_%H%M') if pd.notna(latest_end) else 'NODATE'
                 
-                # Create human-readable dates for display
                 date_debut_display = self.format_date_for_display(earliest_start)
                 date_fin_display = self.format_date_for_display(latest_end)
                 
@@ -632,19 +661,19 @@ class AnalysisEngine:
                     'site': site,
                     'client': client_summary,
                     'material_number': material_number,
-                    'engin': material_number,  # Keep for backward compatibility
-                    'date_debut': date_debut_tech,  # Technical format for processing
-                    'date_fin': date_fin_tech,      # Technical format for processing
-                    'date_debut_display': date_debut_display,  # Human-readable format
-                    'date_fin_display': date_fin_display,      # Human-readable format
+                    'engin': material_number,
+                    'date_debut': date_debut_tech,
+                    'date_fin': date_fin_tech,
+                    'date_debut_display': date_debut_display,
+                    'date_fin_display': date_fin_display,
                     'operation': operations_summary[:50] + '...' if len(operations_summary) > 50 else operations_summary,
-                    'operations_summary': operations_summary,  # Full list
+                    'operations_summary': operations_summary,
                     'libelle': '; '.join([op['libelle'] for op in group if op['libelle']])[:100],
                     'concatenated': concatenated_string,
                     'duration_days': days,
                     'duration_hours': hours,
                     'operations_count': len(group),
-                    # Store actual datetime objects for Excel formatting
+                    'group_week': group_week,  # Add this for week information
                     'start_datetime': earliest_start if pd.notna(earliest_start) else None,
                     'end_datetime': latest_end if pd.notna(latest_end) else None,
                     'rdv_details': [
@@ -655,7 +684,8 @@ class AnalysisEngine:
                             'end': op['end_date'].isoformat() if pd.notna(op['end_date']) else None,
                             'start_display': self.format_date_for_display(op['start_date']),
                             'end_display': self.format_date_for_display(op['end_date']),
-                            'acceptee': op['acceptee']
+                            'acceptee': op['acceptee'],
+                            'week_number': op['week_number']  # Add this
                         } for op in group
                     ]
                 })
@@ -663,6 +693,7 @@ class AnalysisEngine:
                 grouped_index += 1
         
         return concatenated_data
+
     def _group_overlapping_operations(self, operations):
         """Group operations that overlap or are consecutive for the same locomotive"""
         if not operations:
