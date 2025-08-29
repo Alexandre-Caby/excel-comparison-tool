@@ -4,7 +4,7 @@ import pandas as pd
 import xlsxwriter
 import csv
 from time import time
-from datetime import datetime, date, time as dt_time
+from datetime import datetime, date, time as dt_time, timedelta
 import re
 from io import BytesIO
 from reportlab.lib.utils import ImageReader
@@ -1154,6 +1154,9 @@ class ReportGenerator:
                     'border': 1
                 })
                 
+                # Get week filter from metadata
+                week_filter = results.get('metadata', {}).get('week_filter', 'all')
+                
                 # Create each sheet
                 if export_options.get('summary', True):
                     ReportGenerator._create_analysis_summary_sheet(workbook, results, title_format, header_format, data_format)
@@ -1166,7 +1169,8 @@ class ReportGenerator:
 
                 if export_options.get('concatenated', True) and results.get('concatenated_data'):
                     ReportGenerator._create_concatenated_data_sheet(workbook, results['concatenated_data'], header_format, data_format, date_format)
-                    ReportGenerator._create_php_synthesis_sheet(workbook, results['concatenated_data'], header_format, data_format, date_format)
+                    # Pass the week filter to PHP synthesis
+                    ReportGenerator._create_php_synthesis_sheet(workbook, results['concatenated_data'], header_format, data_format, date_format, week_filter)
 
                 if export_options.get('conflicts', True) and results.get('conflicts'):
                     ReportGenerator._create_conflicts_sheet(workbook, results['conflicts'], header_format, data_format, date_format)
@@ -1442,31 +1446,33 @@ class ReportGenerator:
             
             ws.write(row_idx, 7, conflict.get('days', 0), data_format)
             ws.write(row_idx, 8, conflict.get('occurrence_count', 1), data_format)
-            
+
     @staticmethod
-    def _create_php_synthesis_sheet(workbook, concatenated_data, header_format, data_format, date_format):
+    def _create_php_synthesis_sheet(workbook, concatenated_data, header_format, data_format, date_format, week_filter=None):
         """Create PHP synthesis sheet with specific column order: Engin, Date fin, Heure fin, Site, Client
-        Only includes locomotives with accepted operations (Acceptée ≥ 2)"""
+        Only includes locomotives with accepted operations (Acceptée ≥ 2) and dates within correct week ranges
+        If week_filter is specified, only show that specific week"""
         ws = workbook.add_worksheet('📋 Synthèse pour PHP')
         
         # Headers in the exact order requested
-        headers = ['Engin', 'Date fin', 'Heure fin', 'Site', 'Client']
+        headers = ['Engin', 'Date fin', 'Heure fin', 'Site', 'Client', 'Semaine']
         
         # Set column widths optimized for the PHP synthesis
-        column_widths = [25, 15, 12, 20, 25]
+        column_widths = [25, 15, 12, 20, 25, 10]
         for col_idx, width in enumerate(column_widths):
             ws.set_column(col_idx, col_idx, width)
         
-        # Create specialized formats for date and time
-        date_only_format = workbook.add_format({
-            'num_format': 'dd/mm/yyyy',
+        # Use the passed date_format and create a time-only format based on it
+        time_only_format = workbook.add_format({
+            'num_format': 'hh:mm',
             'align': 'center',
             'valign': 'vcenter',
             'border': 1
         })
         
-        time_only_format = workbook.add_format({
-            'num_format': 'hh:mm',
+        # Create a date-only format based on the passed date_format
+        date_only_format = workbook.add_format({
+            'num_format': 'dd/mm/yyyy',
             'align': 'center',
             'valign': 'vcenter',
             'border': 1
@@ -1476,8 +1482,19 @@ class ReportGenerator:
         for col_idx, header in enumerate(headers):
             ws.write(0, col_idx, header, header_format)
         
-        # Filter concatenated data to only include accepted operations
+        def get_iso_week_range(year, week_number):
+            """Get the Monday and Sunday dates for a given ISO week"""
+            jan4 = datetime(year, 1, 4)
+            week1_monday = jan4 - timedelta(days=jan4.weekday())
+            target_monday = week1_monday + timedelta(weeks=week_number - 1)
+            target_sunday = target_monday + timedelta(days=6)
+            
+            return target_monday.date(), target_sunday.date()
+        
+        # Filter concatenated data to only include accepted operations with correct week dates
         filtered_data = []
+        current_year = 2025  # Adjust based on your data year
+        
         for item in concatenated_data:
             # Check if this locomotive has accepted operations
             rdv_details = item.get('rdv_details', [])
@@ -1485,9 +1502,9 @@ class ReportGenerator:
             
             for rdv in rdv_details:
                 acceptee_value = rdv.get('acceptee')
-                if acceptee_value is not None:
+                if acceptee_value is not None and acceptee_value != 'None':
                     try:
-                        acceptee_int = int(float(acceptee_value))
+                        acceptee_int = int(float(str(acceptee_value)))
                         if acceptee_int >= 2:  # Accepted operations (≥ 2)
                             has_accepted = True
                             break
@@ -1496,38 +1513,136 @@ class ReportGenerator:
             
             # Only include locomotives with at least one accepted operation
             if has_accepted:
-                filtered_data.append(item)
+                end_datetime = item.get('end_datetime')
+                if end_datetime and pd.notna(end_datetime):
+                    try:
+                        end_date = end_datetime.date()
+                        end_year = end_datetime.year
+                        
+                        # Calculate the actual ISO week number
+                        iso_calendar = end_datetime.isocalendar()
+                        actual_week = iso_calendar[1]
+                        actual_year = iso_calendar[0]  # ISO year can be different from calendar year
+                        
+                        # Get the actual week range for this week number
+                        week_start, week_end = get_iso_week_range(actual_year, actual_week)
+                        
+                        # Check if the end date actually falls within this week's range
+                        if week_start <= end_date <= week_end:
+                            week_key = f"S{actual_week:02d}"
+                            
+                            # Apply week filter if specified
+                            if week_filter and week_filter != 'all':
+                                # Normalize week filter format
+                                if week_filter.upper().startswith('S'):
+                                    target_week = week_filter.upper()
+                                else:
+                                    target_week = f"S{int(week_filter):02d}"
+                                
+                                # Only include if it matches the selected week
+                                if week_key != target_week:
+                                    continue
+                            
+                            # The date is in the correct week range (and matches filter if specified)
+                            item_with_week = item.copy()
+                            item_with_week['actual_week'] = week_key
+                            item_with_week['week_start'] = week_start
+                            item_with_week['week_end'] = week_end
+                            item_with_week['iso_year'] = actual_year
+                            filtered_data.append(item_with_week)
+                            
+                    except Exception as e:
+                        print(f"Error processing date for {item.get('material_number', 'Unknown')}: {e}")
+                        # If we can't calculate the week, skip this item
+                        continue
+                else:
+                    # No valid end date, skip this item
+                    continue
         
-        # Write data - only for locomotives with accepted operations
+        # Sort by week number, then by end date
+        def sort_key(item):
+            week = item.get('actual_week', 'S99')
+            week_num = int(week[1:]) if week.startswith('S') and week[1:].isdigit() else 999
+            end_datetime = item.get('end_datetime')
+            if end_datetime and pd.notna(end_datetime):
+                return (week_num, end_datetime)
+            else:
+                return (week_num, pd.Timestamp.min)
+        
+        filtered_data.sort(key=sort_key)
+        
+        # Group by week for summary
+        week_counts = {}
+        for item in filtered_data:
+            week = item.get('actual_week', 'Unknown')
+            if week not in week_counts:
+                week_counts[week] = 0
+            week_counts[week] += 1
+        
+        # Write data - only for locomotives with accepted operations and valid weeks
         for row_idx, item in enumerate(filtered_data, start=1):
             # Column 0: Engin (material_number)
             ws.write(row_idx, 0, item.get('material_number', ''), data_format)
             
-            # Column 1: Date fin 
+            # Column 1: Date fin - Use the passed date_format for consistency
             end_datetime = item.get('end_datetime')
             if end_datetime and pd.notna(end_datetime):
+                # For date-only column, use date_only_format
                 ws.write_datetime(row_idx, 1, end_datetime.to_pydatetime(), date_only_format)
             else:
-                ws.write(row_idx, 1, item.get('date_fin_date', 'Non défini'), data_format)
+                ws.write(row_idx, 1, 'Non défini', data_format)
             
-            # Column 2: Heure fin
+            # Column 2: Heure fin - Use time_only_format
             if end_datetime and pd.notna(end_datetime):
                 ws.write_datetime(row_idx, 2, end_datetime.to_pydatetime(), time_only_format)
             else:
-                ws.write(row_idx, 2, item.get('date_fin_time', 'Non défini'), data_format)
+                ws.write(row_idx, 2, 'Non défini', data_format)
             
             # Column 3: Site
             ws.write(row_idx, 3, item.get('site', ''), data_format)
             
             # Column 4: Client
             ws.write(row_idx, 4, item.get('client', ''), data_format)
+            
+            # Column 5: Semaine
+            ws.write(row_idx, 5, item.get('actual_week', 'S??'), data_format)
         
-        # Add a note at the bottom about filtering
-        if len(filtered_data) < len(concatenated_data):
-            note_row = len(filtered_data) + 2
-            ws.write(note_row, 0, f'Note: {len(concatenated_data) - len(filtered_data)} locomotives exclues (opérations non acceptées)', 
+        # Add notes
+        note_row = len(filtered_data) + 2
+        excluded_count = len(concatenated_data) - len(filtered_data)
+        
+        # Update note to reflect week filtering
+        if week_filter and week_filter != 'all':
+            target_week = week_filter.upper() if week_filter.upper().startswith('S') else f"S{int(week_filter):02d}"
+            ws.write(note_row, 0, f'Note: Filtré pour la semaine {target_week} uniquement - {len(filtered_data)} locomotives affichées', 
+                    workbook.add_format({'italic': True, 'font_color': 'blue'}))
+        else:
+            ws.write(note_row, 0, f'Note: {excluded_count} locomotives exclues (opérations non acceptées ou dates hors plage)', 
                     workbook.add_format({'italic': True, 'font_color': 'gray'}))
-
+        
+        # Add explanation about week calculation
+        note_row += 1
+        ws.write(note_row, 0, 'Les semaines sont calculées selon la norme ISO (lundi = début de semaine)', 
+                workbook.add_format({'italic': True, 'font_color': 'blue'}))
+        
+        note_row += 1
+        ws.write(note_row, 0, 'Seules les dates tombant dans la plage réelle de la semaine sont incluses', 
+                workbook.add_format({'italic': True, 'font_color': 'blue'}))
+        
+        # Add week summary
+        if week_counts:
+            note_row += 2
+            if week_filter and week_filter != 'all':
+                ws.write(note_row, 0, f'Semaine sélectionnée: {week_filter}', 
+                        workbook.add_format({'bold': True}))
+            else:
+                ws.write(note_row, 0, 'Résumé par semaine:', 
+                        workbook.add_format({'bold': True}))
+            
+            for week, count in sorted(week_counts.items()):
+                note_row += 1
+                ws.write(note_row, 0, f'{week}: {count} locomotives', data_format)
+    
     @staticmethod
     def _create_analysis_csv_export(results, export_options, temp_dir):
         """Create CSV export for analysis results with proper date formatting"""

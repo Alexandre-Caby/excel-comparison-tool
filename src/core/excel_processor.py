@@ -116,10 +116,6 @@ class ExcelProcessor:
                 'commentaires', 'libéllé intervention', 'libelle intervention', 
                 'intervention', 'libéllé', 'libelle'
             ],
-            'Date Butee': [
-                'date butee', 'butee', 'deadline', 'échéance', 'echeance', 'limite', 'limit',
-                'butée intervention', 'date de butée', 'date butée', 'butée'
-            ],
             'Date programmation': [
                 'date programmation', 'date prog', 'schedule date', 'planned date', 'date plan',
                 'date de programmation', 'date de début', 'date debut', 'programmation'
@@ -217,7 +213,7 @@ class ExcelProcessor:
                 detected_mappings = self.detect_column_types(df.columns)
 
             standard_columns = ["Site", "Serie", "Locomotive", "CodeOp", "Commentaire", 
-                               "Date Butee", "Date programmation", "Heure programmation", 
+                               "Date programmation", "Heure programmation", 
                                "Date sortie", "Heure sortie", "Semaine de programmation"]
 
             final_column_names = []
@@ -333,9 +329,9 @@ class ExcelProcessor:
         if df.empty:
             return df
 
-        # Select desired columns (A-J and N and P) based on position
+        # Select desired columns (A-I and N and P) based on position
         if df.shape[1] >= 16:
-            desired_cols = list(range(0, 10)) + [13, 15]  # Columns A-J (0-9), N (13), and P (15)
+            desired_cols = list(range(0, 9)) + [12, 14]  # Columns A-I (0-8), N (12), and P (14)
             df_copy = df.iloc[:, desired_cols].copy()
         else:
             df_copy = df.copy()
@@ -347,7 +343,6 @@ class ExcelProcessor:
             'N° Matériel Roulant': ['n° matériel roulant', 'matériel roulant'],
             'Code Opération': ['code opération'],
             'Libellé Intervention': ['libéllé intervention', 'libellé intervention'],
-            'Butée Intervention': ['butée', 'butée intervention'],
             'Date de Début': ['date de début'],
             'Heure de Début': ['heure de début', 'heure de\ndébut'],
             'Date de Fin': ['date de fin'],
@@ -438,7 +433,7 @@ class ExcelProcessor:
                         df_copy[time_col] = df_copy[time_col].apply(extract_time_from_datetime_string)
                         break
 
-        date_columns = ['Date de Début', 'Date de Fin', 'Butée Intervention']
+        date_columns = ['Date de Début', 'Date de Fin']
         for date_col in date_columns:
             if date_col in df_copy.columns:
                 # Save original values in a separate column
